@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { GameScene, SceneCtx } from './sceneManager'
 import { FPSControls } from '../input/controls'
 import { buildCorridor } from '../world/corridor'
+import { makePerson } from '../world/person'
 import { applyStat } from '../core/state'
 import { addJournal } from '../core/journal'
 import { sound, FootstepTracker } from '../audio/sound'
@@ -22,6 +23,11 @@ export function makeOpening(): GameScene {
   const controls = new FPSControls(camera)
   controls.setBounds(new THREE.Vector3(-0.9, 1.6, rig.endDoorZ + 0.8), new THREE.Vector3(0.9, 1.6, 1.8))
 
+  // 교수 — 정문 오류 후 등 뒤에 서 있다 (정장 모델, 시선 추적 포함)
+  const prof = makePerson({ variant: 'suit' })
+  prof.group.visible = false
+  scene.add(prof.group)
+
   let ctx!: SceneCtx
   let platesSwapped = false
   let teleports = 0
@@ -40,12 +46,44 @@ export function makeOpening(): GameScene {
     sound.synth?.play('beep_error', 0.5)
     await o.showSubtitle('등록되지 않은 구성원입니다.', 1900)
     applyStat(ctx.state, 'sanity', -10)
-    // 암전 — 교수 시퀀스 (원작 3-3장 대사)
-    await o.showCard('…', 900)
-    await o.showSubtitle('교수: "어디 갔다 왔어?"', 2100)
-    await o.showSubtitle('교수: "이걸 두고 가면 어떡해."', 2100)
+
+    // ── 교수 시퀀스 (원작 3-3장) — 등 뒤 목소리 → 강제로 뒤돌아보기 ──
+    const px = camera.position
+    prof.group.position.set(0, 0, px.z + 5)
+    prof.group.rotation.y = Math.atan2(px.x, -5) // 플레이어를 마주 봄
+    prof.group.visible = true
+    void o.showSubtitle('교수: "어디 갔다 왔어?"', 2400)
+    await wait(600)
+    // 카메라를 천천히 뒤로 돌린다 (조작은 이미 잠김)
+    const sy = camera.rotation.y
+    const sx = camera.rotation.x
+    let dy = Math.atan2(px.x, -5) - sy
+    dy = Math.atan2(Math.sin(dy), Math.cos(dy))
+    if (Math.abs(dy) < 0.1) dy = Math.PI // 이미 뒤를 보고 있던 게 아니라면 반바퀴
+    for (let i = 1; i <= 26; i++) {
+      const t = i / 26
+      const e = t * t * (3 - 2 * t) // smoothstep
+      camera.rotation.y = sy + dy * e
+      camera.rotation.x = sx * (1 - e)
+      await wait(52)
+    }
+    // 교수가 천천히 다가온다
+    void o.showSubtitle('교수: "이걸 두고 가면 어떡해."', 2600)
+    const fromZ = prof.group.position.z
+    const toZ = px.z + 1.25
+    for (let i = 1; i <= 36; i++) {
+      const t = i / 36
+      const e = t * t * (3 - 2 * t)
+      prof.group.position.z = fromZ + (toZ - fromZ) * e
+      if (i % 9 === 0) sound.synth?.play('footstep', 0.18)
+      await wait(70)
+    }
+    await wait(400)
+    // 출입증을 걸어준다
+    sound.synth?.play('beep_ok', 0.3)
     await o.showBadge(ctx.state)
-    await o.showSubtitle('교수: "연구실 사람은 이거 없으면 안 되지."', 2200)
+    void o.showSubtitle('교수: "연구실 사람은 이거 없으면 안 되지."', 2200)
+    await wait(2300)
     await o.showSubtitle('교수: "내일 일찍 와."', 1900)
     // 시계 파괴
     await o.showCard('21:47', 1100)
@@ -80,6 +118,7 @@ export function makeOpening(): GameScene {
     },
     update(dt) {
       controls.update(dt)
+      if (prof.group.visible) prof.update(dt, camera.position) // idle 애니 + 느린 시선
       if (!ctx || ended || ctx.modes.mode !== 'fps') return
       steps.update(camera.position)
       const z = camera.position.z
