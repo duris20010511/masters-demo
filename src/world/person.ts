@@ -6,7 +6,7 @@ const MODEL_URL = {
   man: './assets/models/man-longsleeve.glb',
   suit: './assets/models/man-suit.glb',
   woman: './assets/models/woman-casual.glb',
-  zombie: './assets/models/zombie.glb',
+  monster: './assets/models/monster.glb', // Quaternius Alien — 마르고 긴 인간형 (CC0)
 }
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
@@ -115,10 +115,10 @@ export function makeChaser(): Chaser {
     current = { name, action }
   }
 
-  void loadModel(MODEL_URL.zombie)
+  void loadModel(MODEL_URL.monster)
     .then(model => {
-      // 주의: 좀비는 인물 팩과 원본 스케일이 다르다 (더 작음) — 0.68은 1m 고블린이 됐음
-      const inst = instantiate(model, { scale: 1.55 }) // 문(2.1m)보다 크게
+      // CharacterArmature 팩은 원본이 작다 (~1.4유닛) — 문(2.1m)을 압도하는 체급으로
+      const inst = instantiate(model, { scale: 1.7 })
       // 통일된 검붉은 실루엣으로 강제 — 디테일을 지우고 형체만 배어나오게
       // (연출 원칙: 괴물의 전신을 명확히 보여주지 않는다)
       const silhouette = new THREE.MeshStandardMaterial({
