@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { GameScene, SceneCtx } from './sceneManager'
 import { loadCheckpoint, clearCheckpoint } from '../core/checkpoint'
+import { initSound, sound } from '../audio/sound'
 import { STR } from '../content/strings'
 
 export const audio = { ctx: null as AudioContext | null }
@@ -18,6 +19,7 @@ export function makeTitle(): GameScene {
       await ctx.overlay.showGate(STR.title.name, STR.title.sub, STR.title.gate)
       audio.ctx ??= new AudioContext()
       await audio.ctx.resume()
+      initSound(audio.ctx)
 
       // 재접속 복원 (스펙 §11 체크포인트) — 네이티브 confirm 대신 인게임 선택지
       const saved = loadCheckpoint()
@@ -39,6 +41,7 @@ export function makeTitle(): GameScene {
       ctx.fx.set({ grain: 0.15 })
       for (const p of [12, 38, 61, 73, 89, 100]) {
         ctx.fx.pulse('glitch', 0.3, 120)
+        sound.synth?.play('glitch', 0.2)
         await ctx.overlay.showSubtitle(STR.title.restoring(p), 220)
       }
       ctx.advance()

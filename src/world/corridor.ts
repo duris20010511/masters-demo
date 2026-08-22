@@ -1,10 +1,9 @@
 import * as THREE from 'three'
 import { makeDoor, makePlateTexture } from './props'
+import { floorTexture, ceilingTexture, wallTexture, makeGlowSprite, makeExitSign } from './textures'
 
 const M = {
-  wall: new THREE.MeshLambertMaterial({ color: 0xd8d4ca }),
   wallDark: new THREE.MeshLambertMaterial({ color: 0x2a2a30 }),
-  floor: new THREE.MeshLambertMaterial({ color: 0x8e8e86 }),
   floorDark: new THREE.MeshLambertMaterial({ color: 0x232326 }),
   lamp: new THREE.MeshBasicMaterial({ color: 0xffffff }),
   redLamp: new THREE.MeshBasicMaterial({ color: 0xff2a1a }),
@@ -30,9 +29,16 @@ const W = 2.4 // 폭
 
 export function buildCorridor(opts: { dark: boolean }): CorridorRig {
   const g = new THREE.Group()
-  const wall = opts.dark ? M.wallDark : M.wall
-  const floor = opts.dark ? M.floorDark : M.floor
   const length = SEG * SEGS
+  const wall = opts.dark
+    ? M.wallDark
+    : new THREE.MeshLambertMaterial({ map: wallTexture(length + 4) })
+  const floor = opts.dark
+    ? M.floorDark
+    : new THREE.MeshLambertMaterial({ map: floorTexture(W, length + 4) })
+  const ceil = opts.dark
+    ? M.wallDark
+    : new THREE.MeshLambertMaterial({ map: ceilingTexture(W, length + 4) })
   const walls: THREE.Mesh[] = []
 
   const mkWall = (w: number, h: number, d: number, x: number, y: number, z: number) => {
@@ -43,7 +49,7 @@ export function buildCorridor(opts: { dark: boolean }): CorridorRig {
 
   // 바닥·천장·양옆 벽 (긴 판 하나씩)
   g.add(box(W, 0.1, length + 4, floor, 0, -0.05, -length / 2 + 1))
-  g.add(box(W, 0.1, length + 4, wall, 0, 3, -length / 2 + 1))
+  g.add(box(W, 0.1, length + 4, ceil, 0, 3, -length / 2 + 1))
   mkWall(0.1, 3, length + 4, -W / 2, 1.5, -length / 2 + 1)
   mkWall(0.1, 3, length + 4, W / 2, 1.5, -length / 2 + 1)
   // 시작 쪽 막힌 벽
@@ -54,9 +60,17 @@ export function buildCorridor(opts: { dark: boolean }): CorridorRig {
     const z = -SEG * i - 2
     // 조명
     if (opts.dark) {
-      if (i % 2 === 1) g.add(box(0.1, 0.5, 0.18, M.redLamp, -W / 2 + 0.06, 2.4, z)) // 붉은 비상등
+      if (i % 2 === 1) {
+        g.add(box(0.1, 0.5, 0.18, M.redLamp, -W / 2 + 0.06, 2.4, z)) // 붉은 비상등
+        const glow = makeGlowSprite(1.6, 1.6, 0xff3322)
+        glow.position.set(-W / 2 + 0.2, 2.4, z)
+        g.add(glow)
+      }
     } else {
       g.add(box(0.9, 0.04, 0.35, M.lamp, 0, 2.95, z))
+      const glow = makeGlowSprite(1.8, 1.0)
+      glow.position.set(0, 2.82, z)
+      g.add(glow)
     }
     // 양옆 문 + 명패
     for (const side of [-1, 1]) {
@@ -81,6 +95,15 @@ export function buildCorridor(opts: { dark: boolean }): CorridorRig {
   endDoor.position.set(0, 0, endDoorZ - 0.4)
   g.add(endDoor)
   mkWall(W, 3, 0.1, 0, 1.5, endDoorZ - 0.5)
+  // 비상구 표지 (끝 문 위 — 어두운 변형에서도 발광)
+  const exit = makeExitSign()
+  exit.position.set(0, 2.55, endDoorZ - 0.33)
+  g.add(exit)
+  if (opts.dark) {
+    const exitGlow = makeGlowSprite(1.2, 0.7, 0x22cc66)
+    exitGlow.position.set(0, 2.55, endDoorZ - 0.2)
+    g.add(exitGlow)
+  }
 
   return {
     group: g,

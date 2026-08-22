@@ -5,6 +5,7 @@ import { saveCheckpoint } from '../core/checkpoint'
 import { Overlay } from '../ui/overlay'
 import { PostFX } from '../render/postfx'
 import { ModeManager } from '../input/modes'
+import { sound } from '../audio/sound'
 import { STR } from '../content/strings'
 
 export interface SceneCtx {
@@ -56,13 +57,15 @@ export class SceneManager {
     if (this.current) {
       this.ctx.fx.pulse('glitch', 0.9, 700)
       this.ctx.fx.pulse('rgbShift', 0.6, 700)
+      sound.synth?.play('glitch', 0.45)
       await new Promise(r => setTimeout(r, 700))
     }
 
     this.current?.exit()
     this.current = null
     this.ctx.state.phase = phase
-    saveCheckpoint(this.ctx.state)
+    // 타이틀은 저장하지 않는다 — 리로드 시 진짜 체크포인트를 덮어써 이어하기가 죽는다
+    if (phase !== 'title') saveCheckpoint(this.ctx.state)
 
     const make = this.makers.get(phase)
     if (!make) {

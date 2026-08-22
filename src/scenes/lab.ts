@@ -5,17 +5,25 @@ import { runDocMinigame } from '../ui/minigame1'
 import { applyStat } from '../core/state'
 import { STR } from '../content/strings'
 import { makePerson } from '../world/person'
+import { sound, FootstepTracker } from '../audio/sound'
 import {
   makeChair, makeShelf, makePrinter, makeWindow, makeWallClock, makeDoor, makePaperPile,
 } from '../world/props'
+import {
+  floorTexture, ceilingTexture, wallTexture, screenSheetTexture, screenCodeTexture,
+  makeGlowSprite, makePosterMesh,
+} from '../world/textures'
 
 const M = {
-  wall: new THREE.MeshLambertMaterial({ color: 0xdedbd2 }),
-  floor: new THREE.MeshLambertMaterial({ color: 0x9a9a92 }),
+  wallZ: new THREE.MeshLambertMaterial({ map: wallTexture(8) }),   // 앞뒤 벽 (8m)
+  wallX: new THREE.MeshLambertMaterial({ map: wallTexture(10) }),  // 옆 벽 (10m)
+  floor: new THREE.MeshLambertMaterial({ map: floorTexture(8, 10) }),
+  ceil: new THREE.MeshLambertMaterial({ map: ceilingTexture(8, 10) }),
   desk: new THREE.MeshLambertMaterial({ color: 0xc9c4b8 }),
   dark: new THREE.MeshLambertMaterial({ color: 0x333333 }),
-  screen: new THREE.MeshBasicMaterial({ color: 0xbfd8ff }),
-  screenDim: new THREE.MeshBasicMaterial({ color: 0x3a4450 }),
+  screen: new THREE.MeshBasicMaterial({ map: screenSheetTexture() }),
+  screenDim: new THREE.MeshBasicMaterial({ map: screenCodeTexture() }),
+  screenOff: new THREE.MeshBasicMaterial({ color: 0x22262c }),
   lamp: new THREE.MeshBasicMaterial({ color: 0xffffff }), // emissive 형광등
 }
 
@@ -45,12 +53,30 @@ export function makeLab(): GameScene {
 
   // ── 방 8x3x10 ──────────────────────────────────────────────
   scene.add(box(8, 0.1, 10, M.floor, 0, -0.05, 0))
-  scene.add(box(8, 0.1, 10, M.wall, 0, 3, 0))
-  scene.add(box(8, 3, 0.1, M.wall, 0, 1.5, -5))
-  scene.add(box(8, 3, 0.1, M.wall, 0, 1.5, 5))
-  scene.add(box(0.1, 3, 10, M.wall, -4, 1.5, 0))
-  scene.add(box(0.1, 3, 10, M.wall, 4, 1.5, 0))
-  for (const z of [-3, -1, 1, 3]) scene.add(box(1.4, 0.05, 0.5, M.lamp, 0, 2.95, z))
+  scene.add(box(8, 0.1, 10, M.ceil, 0, 3, 0))
+  scene.add(box(8, 3, 0.1, M.wallZ, 0, 1.5, -5))
+  scene.add(box(8, 3, 0.1, M.wallZ, 0, 1.5, 5))
+  scene.add(box(0.1, 3, 10, M.wallX, -4, 1.5, 0))
+  scene.add(box(0.1, 3, 10, M.wallX, 4, 1.5, 0))
+  for (const z of [-3, -1, 1, 3]) {
+    scene.add(box(1.4, 0.05, 0.5, M.lamp, 0, 2.95, z))
+    const glow = makeGlowSprite(2.6, 1.3)
+    glow.position.set(0, 2.8, z)
+    scene.add(glow)
+  }
+
+  // ── 벽 포스터 (세계관 소품) ────────────────────────────────
+  const pSafety = makePosterMesh('safety')
+  pSafety.position.set(3.94, 1.7, 0.6)
+  pSafety.rotation.y = -Math.PI / 2
+  scene.add(pSafety)
+  const pConf = makePosterMesh('conf')
+  pConf.position.set(1.9, 1.7, -4.93)
+  scene.add(pConf)
+  const pGrad = makePosterMesh('grad')
+  pGrad.position.set(1.4, 1.7, 4.94)
+  pGrad.rotation.y = Math.PI
+  scene.add(pGrad)
 
   // ── 책상 4 + 모니터 + 의자 ─────────────────────────────────
   const pc = box(0.6, 0.4, 0.06, M.screen, -2.5, 1.05, -3.2)
@@ -60,7 +86,8 @@ export function makeLab(): GameScene {
     scene.add(box(1.6, 0.06, 0.8, M.desk, x, 0.8, z))
     scene.add(box(0.05, 0.74, 0.7, M.desk, x - 0.75, 0.4, z))
     scene.add(box(0.05, 0.74, 0.7, M.desk, x + 0.75, 0.4, z))
-    if (!(x === -2.5 && z === -3)) scene.add(box(0.6, 0.4, 0.06, M.screenDim, x, 1.05, z - 0.2))
+    if (!(x === -2.5 && z === -3))
+      scene.add(box(0.6, 0.4, 0.06, x === 2.5 && z === 0 ? M.screenOff : M.screenDim, x, 1.05, z - 0.2))
     const chair = makeChair()
     chair.position.set(x, 0, z + 0.6)
     chair.rotation.y = Math.PI
@@ -126,6 +153,7 @@ export function makeLab(): GameScene {
   let ctx!: SceneCtx
   let step: 'colleague' | 'pc' | 'reader' | 'done' = 'colleague'
   let aimed: THREE.Object3D | null = null
+  const steps = new FootstepTracker()
 
   function stepTarget(): THREE.Object3D | null {
     return step === 'colleague' ? colleague : step === 'pc' ? pc : step === 'reader' ? freezer : null
@@ -146,6 +174,7 @@ export function makeLab(): GameScene {
       step = 'reader'
       void ctx.overlay.showSubtitle('냉동고 리더기가 출입증을 요구한다. (냉동고에 E)', 2200)
     } else if (step === 'reader' && target === freezer) {
+      sound.synth?.play('beep_ok', 0.4)
       await ctx.overlay.showBadge(ctx.state) // 출입증 강제 노출 (스펙 §3)
       ctx.fx.pulse('glitch', 0.4, 300)
       step = 'done'
@@ -173,6 +202,7 @@ export function makeLab(): GameScene {
       document.addEventListener('keydown', onKey)
       ctx.modes.onChange(m => { controls.enabled = m === 'fps' })
       ctx.fx.set({ grain: 0.06, vignette: 0.18 }) // 밝은 랩실에선 절제
+      sound.synth?.start('hum', 0.18) // 형광등 험
       await ctx.overlay.showCard('??:??', 1200)
       // PointerLock은 유저 제스처 내에서만 허용 — 클릭 게이트로 재잠금
       await ctx.overlay.showClickToContinue()
@@ -183,10 +213,12 @@ export function makeLab(): GameScene {
       document.removeEventListener('keydown', onKey)
       controls.dispose()
       ctx?.overlay.setCrosshair('off')
+      sound.synth?.stop('hum')
     },
     update(dt) {
       controls.update(dt)
       if (!ctx) return
+      if (ctx.modes.mode === 'fps') steps.update(camera.position)
       // 대학원생들의 머리가 아주 천천히 플레이어를 따라온다
       grad1.lookAt(camera.position, dt)
       grad2.lookAt(camera.position, dt)

@@ -4,6 +4,7 @@ import { FPSControls } from '../input/controls'
 import { buildCorridor } from '../world/corridor'
 import { applyStat } from '../core/state'
 import { addJournal } from '../core/journal'
+import { sound, FootstepTracker } from '../audio/sound'
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -25,6 +26,7 @@ export function makeOpening(): GameScene {
   let platesSwapped = false
   let teleports = 0
   let ended = false
+  const steps = new FootstepTracker()
 
   async function endSequence(): Promise<void> {
     ended = true
@@ -33,7 +35,9 @@ export function makeOpening(): GameScene {
     // 정문 카드 오류 (스펙 §3)
     ctx.fx.pulse('rgbShift', 0.7, 500)
     ctx.fx.pulse('glitch', 0.5, 500)
+    sound.synth?.play('beep_error', 0.5)
     await o.showSubtitle('출입 권한을 확인할 수 없습니다.', 1900)
+    sound.synth?.play('beep_error', 0.5)
     await o.showSubtitle('등록되지 않은 구성원입니다.', 1900)
     applyStat(ctx.state, 'sanity', -10)
     // 암전 — 교수 시퀀스 (원작 3-3장 대사)
@@ -60,6 +64,7 @@ export function makeOpening(): GameScene {
       ctx = c
       ctx.modes.onChange(m => { controls.enabled = m === 'fps' })
       ctx.fx.set({ grain: 0.07, vignette: 0.2 })
+      sound.synth?.start('hum', 0.15)
       await ctx.overlay.showCard('21:47', 1200)
       void ctx.overlay.showSubtitle('"저 먼저 가보겠습니다."', 1800)
       await wait(1900)
@@ -71,10 +76,12 @@ export function makeOpening(): GameScene {
     exit() {
       controls.dispose()
       ctx?.overlay.setCrosshair('off')
+      sound.synth?.stop('hum')
     },
     update(dt) {
       controls.update(dt)
       if (!ctx || ended || ctx.modes.mode !== 'fps') return
+      steps.update(camera.position)
       const z = camera.position.z
 
       // 첫 이상: 명패가 전부 405호로 (조작 시작 후 ~10초 지점, 글리치로 교체 은폐)
