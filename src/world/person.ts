@@ -1,12 +1,12 @@
 import * as THREE from 'three'
-import { loadModel, instantiate, playClip } from './models'
+import { distortChaser, loadModel, instantiate, playClip } from './models'
 
-// 외부 CC0 모델 (Quaternius, poly.pizza static CDN에서 다운로드해 저장소에 커밋)
+// MakeHuman/MPFB 2 기반 CC0 디지털 휴먼. 텍스처와 locomotion clip이 GLB에 내장되어 있다.
 const MODEL_URL = {
-  man: './assets/models/man-longsleeve.glb',
-  suit: './assets/models/man-suit.glb',
-  woman: './assets/models/woman-casual.glb',
-  monster: './assets/models/monster.glb', // Quaternius Alien — 마르고 긴 인간형 (CC0)
+  man: './assets/models/makehuman-man.glb',
+  suit: './assets/models/makehuman-suited.glb',
+  woman: './assets/models/makehuman.glb',
+  monster: './assets/models/makehuman-man.glb',
 }
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
@@ -45,13 +45,12 @@ export function makePerson(
 
   void loadModel(MODEL_URL[opts.variant ?? 'man'])
     .then(model => {
-      // 원본 ~3.2유닛 → 1.7m. Sitting은 의자 정렬이 깨져서 서 있는 Idle로 통일.
-      const inst = instantiate(model, { scale: 0.53 })
+      const inst = instantiate(model, { scale: 1.0 })
       playClip(inst.mixer, inst.clips, ['Idle'])
       g.remove(fallback)
       g.add(inst.root)
       mixer = inst.mixer
-      headBone = inst.root.getObjectByName('Head') ?? null
+      headBone = inst.root.getObjectByName('head') ?? inst.root.getObjectByName('Head') ?? null
     })
     .catch(e => {
       console.warn('[person] load failed', e)
@@ -81,7 +80,7 @@ export interface Chaser {
   apply(pos: { x: number; z: number }, facing: number, dtMs: number, mode: ChaserMode): void
 }
 
-/** 추적자 — 좀비 모델. 가슴의 출입증만 빛난다 (직위: 석사과정). */
+/** 추적자 — 동료와 같은 디지털 휴먼을 길게 왜곡한 형체. */
 export function makeChaser(): Chaser {
   const g = new THREE.Group()
   const fallback = primitiveFallback(false)
@@ -106,8 +105,7 @@ export function makeChaser(): Chaser {
     if (!mixer) return
     const name = CLIP[mode]
     if (current?.name === name) return
-    const clip =
-      clips.find(c => c.name === name) ?? clips.find(c => c.name.endsWith(`|${name}`))
+    const clip = clips.find(c => c.name.toLowerCase() === name.toLowerCase())
     if (!clip) return
     const action = mixer.clipAction(clip)
     action.reset().fadeIn(0.25).play()
@@ -117,20 +115,8 @@ export function makeChaser(): Chaser {
 
   void loadModel(MODEL_URL.monster)
     .then(model => {
-      // CharacterArmature 팩은 원본이 작다 (~1.4유닛) — 문(2.1m)을 압도하는 체급으로
-      const inst = instantiate(model, { scale: 1.7 })
-      // 통일된 검붉은 실루엣으로 강제 — 디테일을 지우고 형체만 배어나오게
-      // (연출 원칙: 괴물의 전신을 명확히 보여주지 않는다)
-      const silhouette = new THREE.MeshStandardMaterial({
-        color: 0x241110,
-        emissive: 0x7a2014,
-        emissiveIntensity: 1.1,
-        roughness: 0.95,
-      })
-      inst.root.traverse(o => {
-        const mesh = o as THREE.Mesh
-        if (mesh.isMesh) mesh.material = silhouette
-      })
+      const inst = instantiate(model, { scale: 1.12, tint: 0x241110 })
+      distortChaser(inst.root)
       g.remove(fallback)
       g.add(inst.root)
       mixer = inst.mixer

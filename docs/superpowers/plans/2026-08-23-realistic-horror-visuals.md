@@ -44,10 +44,10 @@
 - Add `tintMaterial(material: THREE.Material, color: number): THREE.Material`.
 - Add `distortChaser(root: THREE.Object3D): void`.
 
-- [ ] Write a failing test that asserts `tintMaterial` retains a `MeshStandardMaterial.map`, and a Mixamo fixture test that asserts the two forearm bones have local-Y scale `1.35` after `distortChaser`.
+- [ ] Write a failing test that asserts `tintMaterial` retains a `MeshStandardMaterial.map`, and a MakeHuman fixture test that asserts the two forearm bones have local-Y scale `1.35` after `distortChaser`.
 - [ ] Run `npm test -- tests/person.test.ts`; expect the missing helper imports to fail.
 - [ ] Implement `tintMaterial` by cloning `MeshStandardMaterial` and changing color/roughness/emissive only; never clear map, normalMap, roughnessMap, or metalnessMap.
-- [ ] Implement `distortChaser` by scaling `mixamorigLeftForeArm`, `mixamorigRightForeArm`, `mixamorigLeftLeg`, and `mixamorigRightLeg` to `1.35` when present.
+- [ ] Implement `distortChaser` by scaling `lowerarm_l`, `lowerarm_r`, `thigh_l`, and `thigh_r` to `1.35` when present.
 - [ ] Point person and chaser loading to `./assets/models/vitruvian_body.glb`, keep the primitive fallback, and use `Idle`, `Sway`, and `Walk` clips if present.
 - [ ] Re-run `npm test -- tests/person.test.ts`; expect pass, then commit with `git commit -m "feat: use textured digital humans"`.
 
@@ -55,12 +55,13 @@
 
 **Files:**
 
+- Create: `src/render/rendererConfig.ts`
 - Modify: `src/main.ts`
 - Create: `tests/rendererConfig.test.ts`
 
 - [ ] Write a failing test for exported `configureRenderer(renderer)` that expects `SRGBColorSpace`, `ACESFilmicToneMapping`, enabled shadow map, and `PCFSoftShadowMap`.
 - [ ] Run `npm test -- tests/rendererConfig.test.ts`; expect failure because the helper does not exist.
-- [ ] Export and call `configureRenderer`, setting `outputColorSpace = THREE.SRGBColorSpace`, `toneMapping = THREE.ACESFilmicToneMapping`, `toneMappingExposure = 0.9`, `shadowMap.enabled = true`, and `shadowMap.type = THREE.PCFSoftShadowMap`.
+- [ ] Export `configureRenderer` from `src/render/rendererConfig.ts` and call it from `src/main.ts`, setting `outputColorSpace = THREE.SRGBColorSpace`, `toneMapping = THREE.ACESFilmicToneMapping`, `toneMappingExposure = 0.9`, `shadowMap.enabled = true`, and `shadowMap.type = THREE.PCFSoftShadowMap`.
 - [ ] Re-run the focused test; expect pass, then commit with `git commit -m "feat: configure filmic renderer"`.
 
 ### Task 4: Re-light the laboratory and chase scenes
