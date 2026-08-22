@@ -77,14 +77,13 @@ export function makeOpening(): GameScene {
       if (i % 9 === 0) sound.synth?.play('footstep', 0.18)
       await wait(72)
     }
-    prof.play(['cycle_talking'])
+    prof.play(['Idle']) // 도착하면 미동 없이 가만히 — 부자연스러운 정지가 더 무섭다
     await wait(400)
     // 출입증을 걸어준다
     sound.synth?.play('beep_ok', 0.3)
     await o.showBadge(ctx.state)
     void o.showSubtitle('교수: "연구실 사람은 이거 없으면 안 되지."', 2200)
     await wait(2300)
-    prof.play(['Idle'])
     await o.showSubtitle('교수: "내일 일찍 와."', 1900)
     // 시계 파괴
     await o.showCard('21:47', 1100)
