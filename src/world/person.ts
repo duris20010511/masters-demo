@@ -92,7 +92,7 @@ export function makeChaser(): Chaser {
     new THREE.PlaneGeometry(0.07, 0.1),
     new THREE.MeshBasicMaterial({ color: 0xf0ead8 }),
   )
-  badge.position.set(0.02, 1.5, 0.16)
+  badge.position.set(0.02, 1.12, 0.3) // 구부정한 걸음 자세의 가슴 높이
   g.add(badge)
 
   let mixer: THREE.AnimationMixer | null = null
@@ -117,17 +117,19 @@ export function makeChaser(): Chaser {
 
   void loadModel(MODEL_URL.zombie)
     .then(model => {
-      const inst = instantiate(model, { scale: 0.68 }) // ~2.2m 추적자
-      // 완전 어둠에서도 실루엣이 배어나오게 — 어두운 적색 자발광
+      // 주의: 좀비는 인물 팩과 원본 스케일이 다르다 (더 작음) — 0.68은 1m 고블린이 됐음
+      const inst = instantiate(model, { scale: 1.55 }) // 문(2.1m)보다 크게
+      // 통일된 검붉은 실루엣으로 강제 — 디테일을 지우고 형체만 배어나오게
+      // (연출 원칙: 괴물의 전신을 명확히 보여주지 않는다)
+      const silhouette = new THREE.MeshStandardMaterial({
+        color: 0x241110,
+        emissive: 0x7a2014,
+        emissiveIntensity: 1.1,
+        roughness: 0.95,
+      })
       inst.root.traverse(o => {
         const mesh = o as THREE.Mesh
-        if (mesh.isMesh) {
-          const m = mesh.material as THREE.MeshStandardMaterial
-          if (m && 'emissive' in m) {
-            m.emissive = new THREE.Color(0x3a0d08)
-            m.emissiveIntensity = 1
-          }
-        }
+        if (mesh.isMesh) mesh.material = silhouette
       })
       g.remove(fallback)
       g.add(inst.root)

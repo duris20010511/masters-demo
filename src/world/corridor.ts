@@ -72,12 +72,11 @@ export function buildCorridor(opts: { dark: boolean }): CorridorRig {
     const zc = zs - 2 // 문 중심
     // 조명
     if (opts.dark) {
-      if (i % 2 === 1) {
-        g.add(box(0.1, 0.5, 0.18, M.redLamp, -W / 2 + 0.06, 2.4, zc))
-        const glow = makeGlowSprite(1.6, 1.6, 0xff3322)
-        glow.position.set(-W / 2 + 0.2, 2.4, zc)
-        g.add(glow)
-      }
+      // 비상등: 전 세그먼트 (시야 확보 — 유저 피드백)
+      g.add(box(0.1, 0.5, 0.18, M.redLamp, -W / 2 + 0.06, 2.4, zc))
+      const glow = makeGlowSprite(1.6, 1.6, 0xff3322)
+      glow.position.set(-W / 2 + 0.2, 2.4, zc)
+      g.add(glow)
     } else {
       g.add(box(0.9, 0.04, 0.35, M.lamp, 0, 2.95, zc))
       const glow = makeGlowSprite(1.8, 1.0)
