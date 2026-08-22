@@ -11,11 +11,8 @@ const MODEL_URL = {
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
 
-function normalizeHeight(root: THREE.Object3D, target: number): void {
-  const box = new THREE.Box3().setFromObject(root)
-  const h = box.max.y - box.min.y
-  if (h > 0.01) root.scale.multiplyScalar(target / h)
-}
+// 주의: 스킨드 메시는 Box3 측정이 엉터리(바인드 전 지오메트리 경계)라 자동 정규화 불가.
+// Quaternius 캐릭터는 원본 ~1.8유닛 — 고정 스케일 사용.
 
 /** 로드 전/실패 시 표시되는 단순 실루엣 */
 function primitiveFallback(seated: boolean): THREE.Group {
@@ -48,16 +45,16 @@ export function makePerson(
 
   void loadModel(MODEL_URL[opts.variant ?? 'man'])
     .then(model => {
-      const inst = instantiate(model)
-      normalizeHeight(inst.root, 1.72)
-      playClip(inst.mixer, inst.clips, [opts.seated ? 'Sitting' : 'Idle'])
+      // 원본 ~3.2유닛 → 1.7m. Sitting은 의자 정렬이 깨져서 서 있는 Idle로 통일.
+      const inst = instantiate(model, { scale: 0.53 })
+      playClip(inst.mixer, inst.clips, ['Idle'])
       g.remove(fallback)
       g.add(inst.root)
       mixer = inst.mixer
       headBone = inst.root.getObjectByName('Head') ?? null
     })
-    .catch(() => {
-      /* 폴백 유지 */
+    .catch(e => {
+      console.warn('[person] load failed', e)
     })
 
   return {
@@ -120,16 +117,26 @@ export function makeChaser(): Chaser {
 
   void loadModel(MODEL_URL.zombie)
     .then(model => {
-      const inst = instantiate(model)
-      normalizeHeight(inst.root, 2.1)
+      const inst = instantiate(model, { scale: 0.68 }) // ~2.2m 추적자
+      // 완전 어둠에서도 실루엣이 배어나오게 — 어두운 적색 자발광
+      inst.root.traverse(o => {
+        const mesh = o as THREE.Mesh
+        if (mesh.isMesh) {
+          const m = mesh.material as THREE.MeshStandardMaterial
+          if (m && 'emissive' in m) {
+            m.emissive = new THREE.Color(0x3a0d08)
+            m.emissiveIntensity = 1
+          }
+        }
+      })
       g.remove(fallback)
       g.add(inst.root)
       mixer = inst.mixer
       clips = inst.clips
       setMode('walk')
     })
-    .catch(() => {
-      /* 폴백 유지 */
+    .catch(e => {
+      console.warn('[chaser] load failed', e)
     })
 
   return {

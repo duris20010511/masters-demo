@@ -53,10 +53,11 @@ export function makeChase(): GameScene {
     const sense = Math.max(0.4, 0.8 ** Math.max(0, fails - 1))
     const spd = Math.max(0.7, 0.9 ** Math.max(0, fails - 3))
     return new ChaserAI({
-      // 리셋 시 첫 웨이포인트에서 시작 — 반드시 스폰 반대편(-25)이 먼저
-      waypoints: [{ x: 0, z: -25 }, { x: 0, z: -5 }],
+      // 리셋 시 첫 웨이포인트에서 시작 — 반드시 스폰 반대편(-25)이 먼저.
+      // 순찰 상한 -10: 시야 6m가 스폰(z≈1.2)까지 닿지 않게 (가만히 있으면 안전)
+      waypoints: [{ x: 0, z: -25 }, { x: 0, z: -10 }],
       hearRadius: 8 * sense,
-      sightRadius: 7 * sense,
+      sightRadius: 6 * sense,
       sightAngleDeg: 70,
       speedPatrol: 1.4,
       speedChase: 2.9 * spd,
