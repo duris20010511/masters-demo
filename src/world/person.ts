@@ -110,10 +110,11 @@ export function makeChaser(): Chaser {
       const inst = instantiate(model)
       // FBX 유래 모델은 단위가 제각각 — 바인드 포즈 높이가 상식 범위(0.5~3m)를
       // 벗어나면 서 있는 인간 1.9m 기준으로 정규화
+      // 조건부 스케일은 두 번 틀렸다 — 무조건 실측 정규화: 서면 2.6m 상당 (기면 ~1.1m)
       const box = new THREE.Box3().setFromObject(inst.root)
       const h = box.max.y - box.min.y
-      if (h > 3 || h < 0.5) inst.root.scale.multiplyScalar(1.9 / h)
-      inst.root.scale.multiplyScalar(1.7) // 기는 자세 보정 — 복도를 채우는 체급으로
+      console.log('[chaser] bind height', h.toFixed(2))
+      if (h > 0.01) inst.root.scale.multiplyScalar(2.6 / h)
       // 텍스처는 살리고 어둠 속 실루엣만 배어나오게 약한 자발광
       inst.root.traverse(o => {
         const mesh = o as THREE.Mesh
