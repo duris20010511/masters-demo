@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 import { createState } from './core/state'
-import { loadCheckpoint } from './core/checkpoint'
-import { ModeManager } from './input/modes'
+import { ModeManager, lockState } from './input/modes'
 import { PostFX } from './render/postfx'
 import { Overlay } from './ui/overlay'
 import { SceneManager } from './scenes/sceneManager'
@@ -31,18 +30,33 @@ const fx = new PostFX(renderer, boot, bootCam)
 ;(window as never as { __fx: PostFX }).__fx = fx // Codex 셰이더 검증용
 
 const overlay = new Overlay(uiRoot)
+let lockWarned = false
+function onLockBroken(): void {
+  if (!lockState.broken) {
+    lockState.broken = true
+    if (!lockWarned) {
+      lockWarned = true
+      void overlay.showSubtitle(
+        '이 환경에서는 마우스 잠금이 차단되어 있습니다 — 좌클릭 드래그로 시점을 돌리세요. (우상단 "새 창에서 열기" 권장)',
+        5000,
+      )
+    }
+  }
+}
 const modes = new ModeManager({
-  lock: () => renderer.domElement.requestPointerLock(),
+  lock: () => {
+    try {
+      const p = renderer.domElement.requestPointerLock() as unknown as Promise<void> | undefined
+      if (p && typeof p.catch === 'function') p.catch(onLockBroken)
+    } catch {
+      onLockBroken()
+    }
+  },
   unlock: () => document.exitPointerLock(),
 })
 
-// 재접속 복원 (스펙 §11 체크포인트)
-let state = createState()
-const saved = loadCheckpoint()
-if (saved && saved.phase !== 'title' && saved.phase !== 'ending') {
-  if (confirm(STR.title.resume)) state = saved
-  else state.phase = 'title'
-}
+// 재접속 복원은 타이틀 씬 내부에서 처리 (title.ts)
+const state = createState()
 
 const scenes = new SceneManager({ state, overlay, fx, modes, renderer })
 scenes.register('title', () => makeTitle())

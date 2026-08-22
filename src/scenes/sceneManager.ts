@@ -14,6 +14,7 @@ export interface SceneCtx {
   modes: ModeManager
   renderer: THREE.WebGLRenderer
   advance(): void
+  goTo(phase: PhaseId): void
 }
 
 export interface GameScene {
@@ -29,14 +30,14 @@ export class SceneManager {
   private current: GameScene | null = null
   private transitioning = false
 
-  constructor(private ctx: Omit<SceneCtx, 'advance'>) {}
+  constructor(private ctx: Omit<SceneCtx, 'advance' | 'goTo'>) {}
 
   register(phase: PhaseId, make: () => GameScene): void {
     this.makers.set(phase, make)
   }
 
   private fullCtx(): SceneCtx {
-    return { ...this.ctx, advance: () => void this.advance() }
+    return { ...this.ctx, advance: () => void this.advance(), goTo: p => void this.goTo(p) }
   }
 
   async start(): Promise<void> {

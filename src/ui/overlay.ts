@@ -35,11 +35,18 @@ export class Overlay {
     return new Promise(res => setTimeout(() => { d.remove(); res() }, ms))
   }
 
+  private subtitleCount = 0
+
   showSubtitle(text: string, ms: number): Promise<void> {
     const d = this.el('subtitle', text)
+    // 자막이 겹치면 위로 쌓는다
+    const offset = 12 + this.subtitleCount * 7
+    this.subtitleCount++
     d.style.cssText =
-      'position:absolute;left:0;right:0;bottom:12%;text-align:center;font-size:18px;text-shadow:0 0 6px #000'
-    return new Promise(res => setTimeout(() => { d.remove(); res() }, ms))
+      `position:absolute;left:0;right:0;bottom:${offset}%;text-align:center;font-size:18px;text-shadow:0 0 6px #000`
+    return new Promise(res =>
+      setTimeout(() => { d.remove(); this.subtitleCount = Math.max(0, this.subtitleCount - 1); res() }, ms),
+    )
   }
 
   showChoices(prompt: string, options: { id: string; label: string }[]): Promise<string> {
@@ -76,6 +83,33 @@ export class Overlay {
     )
     d.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.6)'
     return new Promise(res => d.addEventListener('click', () => { d.remove(); res() }))
+  }
+
+  private crosshairEl: HTMLDivElement | null = null
+
+  setCrosshair(state: 'off' | 'idle' | 'target'): void {
+    if (state === 'off') {
+      this.crosshairEl?.remove()
+      this.crosshairEl = null
+      return
+    }
+    if (!this.crosshairEl) {
+      this.crosshairEl = document.createElement('div')
+      this.root.appendChild(this.crosshairEl)
+    }
+    const active = state === 'target'
+    this.crosshairEl.textContent = active ? 'E' : ''
+    this.crosshairEl.style.cssText =
+      `position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);` +
+      (active
+        ? 'width:22px;height:22px;border:1px solid #fff;border-radius:50%;display:grid;place-items:center;font-size:11px;color:#fff;background:rgba(0,0,0,.35)'
+        : 'width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.55)')
+  }
+
+  showClickToContinue(): Promise<void> {
+    const d = this.el('continue', `<p style="letter-spacing:0.3em;color:#aaa">클릭하여 계속 ▶</p>`, true)
+    d.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;cursor:pointer'
+    return new Promise(res => d.addEventListener('click', () => { d.remove(); res() }, { once: true }))
   }
 
   showGate(title: string, sub: string, buttonText: string): Promise<void> {

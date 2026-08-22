@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { lockState } from './modes'
 
 export class FPSControls {
   enabled = false
@@ -10,6 +11,8 @@ export class FPSControls {
 
   private onMouse = (e: MouseEvent) => {
     if (!this.enabled) return
+    // 잠금 차단 환경에서는 드래그(좌클릭 유지) 중에만 시점 회전
+    if (lockState.broken && !(e.buttons & 1)) return
     this.yaw -= e.movementX * 0.0022
     this.pitch = Math.max(-1.2, Math.min(1.2, this.pitch - e.movementY * 0.0022))
   }

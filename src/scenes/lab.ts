@@ -53,11 +53,13 @@ export function makeLab(): GameScene {
   scene.add(colleague)
   scene.add(box(0.45, 1.7, 0.3, M.body, -2.5, 0.85, 0.4))
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x777788, 1.1))
-  const p1 = new THREE.PointLight(0xfff4e0, 12, 12)
+  // "지나치게 밝은 연구실" — 형광등 느낌의 과노출 (스펙 §10-1)
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x9a9aa8, 2.6))
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55))
+  const p1 = new THREE.PointLight(0xfff4e0, 30, 14)
   p1.position.set(0, 2.7, -2)
   scene.add(p1)
-  const p2 = new THREE.PointLight(0xfff4e0, 12, 12)
+  const p2 = new THREE.PointLight(0xfff4e0, 30, 14)
   p2.position.set(0, 2.7, 2)
   scene.add(p2)
 
@@ -66,6 +68,11 @@ export function makeLab(): GameScene {
   const ray = new THREE.Raycaster()
   let ctx!: SceneCtx
   let step: 'colleague' | 'pc' | 'reader' | 'done' = 'colleague'
+  let aimed: THREE.Object3D | null = null
+
+  function stepTarget(): THREE.Object3D | null {
+    return step === 'colleague' ? colleague : step === 'pc' ? pc : step === 'reader' ? freezer : null
+  }
 
   async function interact(target: THREE.Object3D): Promise<void> {
     ctx.modes.toUI()
@@ -92,10 +99,8 @@ export function makeLab(): GameScene {
   }
 
   const onKey = (e: KeyboardEvent) => {
-    if (e.code === 'KeyE' && ctx.modes.mode === 'fps') {
-      ray.setFromCamera(new THREE.Vector2(0, 0), camera)
-      const hit = ray.intersectObjects([colleague, pc, freezer], false)[0]
-      if (hit && hit.distance < 2.2) void interact(hit.object)
+    if (e.code === 'KeyE' && ctx.modes.mode === 'fps' && aimed) {
+      void interact(aimed)
     }
     if (e.code === 'Tab' && ctx.modes.mode === 'fps') {
       ctx.modes.toUI()
@@ -110,9 +115,12 @@ export function makeLab(): GameScene {
       ctx = c
       document.addEventListener('keydown', onKey)
       ctx.modes.onChange(m => { controls.enabled = m === 'fps' })
+      ctx.fx.set({ grain: 0.06, vignette: 0.18 }) // 밝은 랩실에선 절제
       await ctx.overlay.showCard('??:??', 1200)
+      // PointerLock은 유저 제스처 내에서만 허용 — 클릭 게이트로 재잠금
+      await ctx.overlay.showClickToContinue()
+      ctx.modes.toFPS(true)
       void ctx.overlay.showSubtitle('동료가 말을 걸어온다. (동료에게 다가가 E)', 2600)
-      ctx.modes.toFPS(true) // 타이틀 게이트 클릭에서 이어진 제스처 체인
     },
     exit() {
       document.removeEventListener('keydown', onKey)
@@ -120,6 +128,21 @@ export function makeLab(): GameScene {
     },
     update(dt) {
       controls.update(dt)
+      if (!ctx) return
+      if (ctx.modes.mode !== 'fps') {
+        ctx.overlay.setCrosshair('off')
+        aimed = null
+        return
+      }
+      // 조준 판정: 현재 단계의 대상만, 화면 중앙 레이 + 거리 2.6m
+      aimed = null
+      const target = stepTarget()
+      if (target) {
+        ray.setFromCamera(new THREE.Vector2(0, 0), camera)
+        const hit = ray.intersectObject(target, false)[0]
+        if (hit && hit.distance < 2.6) aimed = target
+      }
+      ctx.overlay.setCrosshair(aimed ? 'target' : 'idle')
     },
   }
 }

@@ -1,5 +1,8 @@
 export type Mode = 'fps' | 'ui' | 'paused'
 
+// PointerLock이 차단된 환경(iframe 임베드 등) 감지 플래그 — main.ts가 설정, controls가 읽는다
+export const lockState = { broken: false }
+
 interface LockHooks { lock: () => void; unlock: () => void }
 
 export class ModeManager {
