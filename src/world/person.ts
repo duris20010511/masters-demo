@@ -1,12 +1,12 @@
 import * as THREE from 'three'
-import { distortChaser, loadModel, instantiate, playClip } from './models'
+import { loadModel, instantiate, playClip } from './models'
 
 // MakeHuman/MPFB 2 기반 CC0 디지털 휴먼. 텍스처와 locomotion clip이 GLB에 내장되어 있다.
 const MODEL_URL = {
   man: './assets/models/makehuman-suited.glb', // 옷 입은 변형만 사용 (베이스는 알몸)
   suit: './assets/models/makehuman-suited.glb',
   woman: './assets/models/makehuman-suited.glb',
-  monster: './assets/models/makehuman-man.glb', // 추적자는 맨몸+왜곡 — 오히려 섬뜩함
+  monster: './assets/models/gaunt.glb', // Gaunt Horror Creature (CC-BY-4.0, PurplePoint)
 }
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
@@ -84,48 +84,49 @@ export interface Chaser {
   apply(pos: { x: number; z: number }, facing: number, dtMs: number, mode: ChaserMode): void
 }
 
-/** 추적자 — 동료와 같은 디지털 휴먼을 길게 왜곡한 형체. */
+/**
+ * 추적자 — Gaunt Horror Creature (정적 모델).
+ * 뼈대·애니메이션이 없는 대신 "손상된 기록" 세계관대로 **스톱모션 글리치 이동**:
+ * 위치·방향이 걸음 간격마다 뚝뚝 끊기며 스냅되고, 스냅 순간 미세하게 뒤틀린다.
+ */
 export function makeChaser(): Chaser {
   const g = new THREE.Group()
   const fallback = primitiveFallback(false)
   fallback.scale.setScalar(1.4)
   g.add(fallback)
-  // 출입증 — 유일하게 빛나는 부분
+  // 출입증 — 어둠 속에서 빛나는 부분 (직위: 석사과정)
   const badge = new THREE.Mesh(
     new THREE.PlaneGeometry(0.07, 0.1),
     new THREE.MeshBasicMaterial({ color: 0xf0ead8 }),
   )
-  badge.position.set(0.02, 1.12, 0.3) // 구부정한 걸음 자세의 가슴 높이
+  badge.position.set(0.03, 1.35, 0.22)
   g.add(badge)
 
-  let mixer: THREE.AnimationMixer | null = null
-  let clips: THREE.AnimationClip[] = []
-  let current: { name: string; action: THREE.AnimationAction } | null = null
-  let t = 0
-
-  const CLIP: Record<ChaserMode, string> = { idle: 'Idle', walk: 'Walk', run: 'Run' }
-
-  function setMode(mode: ChaserMode): void {
-    if (!mixer) return
-    const name = CLIP[mode]
-    if (current?.name === name) return
-    const clip = clips.find(c => c.name.toLowerCase() === name.toLowerCase())
-    if (!clip) return
-    const action = mixer.clipAction(clip)
-    action.reset().fadeIn(0.25).play()
-    current?.action.fadeOut(0.25)
-    current = { name, action }
-  }
+  let acc = 0
+  let stepT = 0
+  const target = { x: 0, z: 0, facing: 0 }
 
   void loadModel(MODEL_URL.monster)
     .then(model => {
-      const inst = instantiate(model, { scale: 1.12, tint: 0x241110 })
-      distortChaser(inst.root)
+      const root = model.scene.clone(true)
+      const box = new THREE.Box3().setFromObject(root) // 정적 메시 — Box3 신뢰 가능
+      const h = box.max.y - box.min.y
+      const s = 2.3 / h
+      root.scale.setScalar(s)
+      root.position.y = -box.min.y * s // 발이 y=0
+      // 텍스처는 살리고 어둠 속 실루엣만 배어나오게 약한 자발광
+      root.traverse(o => {
+        const mesh = o as THREE.Mesh
+        if (mesh.isMesh) {
+          const m = mesh.material as THREE.MeshStandardMaterial
+          if (m && 'emissive' in m) {
+            m.emissive = new THREE.Color(0x2a0a08)
+            m.emissiveIntensity = 0.7
+          }
+        }
+      })
       g.remove(fallback)
-      g.add(inst.root)
-      mixer = inst.mixer
-      clips = inst.clips
-      setMode('walk')
+      g.add(root)
     })
     .catch(e => {
       console.warn('[chaser] load failed', e)
@@ -134,12 +135,23 @@ export function makeChaser(): Chaser {
   return {
     group: g,
     apply(pos, facing, dtMs, mode) {
-      t += dtMs / 1000
-      g.position.set(pos.x, 0, pos.z)
-      g.rotation.y = facing
-      setMode(mode)
-      mixer?.update(dtMs / 1000)
-      badge.rotation.z = Math.sin(t * 3.2) * 0.25 // 출입증이 걸음에 흔들리는 미광
+      acc += dtMs
+      stepT += dtMs
+      target.x = pos.x
+      target.z = pos.z
+      target.facing = facing
+      // 스톱모션: 걸음 간격마다만 실제 위치를 스냅 (뛸수록 간격이 짧아짐)
+      const stepMs = mode === 'run' ? 130 : mode === 'walk' ? 300 : 550
+      if (stepT >= stepMs) {
+        stepT = 0
+        g.position.set(target.x, 0, target.z)
+        g.rotation.y = target.facing
+        // 스냅 순간의 뒤틀림 — 프레임 깨진 데이터처럼
+        const j = Math.sin(acc * 0.013)
+        g.rotation.z = j * 0.05
+        g.rotation.x = mode === 'run' ? 0.09 + j * 0.03 : j * 0.02
+      }
+      badge.rotation.z = Math.sin(acc * 0.0032) * 0.25
     },
   }
 }
