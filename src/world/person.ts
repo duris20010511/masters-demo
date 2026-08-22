@@ -98,7 +98,7 @@ export function makeChaser(): Chaser {
     new THREE.PlaneGeometry(0.07, 0.1),
     new THREE.MeshBasicMaterial({ color: 0xf0ead8 }),
   )
-  badge.position.set(0.02, 0.5, 0.55)
+  badge.position.set(0.02, 0.8, 0.85)
   g.add(badge)
 
   let acc = 0
@@ -113,6 +113,7 @@ export function makeChaser(): Chaser {
       const box = new THREE.Box3().setFromObject(inst.root)
       const h = box.max.y - box.min.y
       if (h > 3 || h < 0.5) inst.root.scale.multiplyScalar(1.9 / h)
+      inst.root.scale.multiplyScalar(1.7) // 기는 자세 보정 — 복도를 채우는 체급으로
       // 텍스처는 살리고 어둠 속 실루엣만 배어나오게 약한 자발광
       inst.root.traverse(o => {
         const mesh = o as THREE.Mesh
