@@ -112,20 +112,32 @@ export function makeChase(): GameScene {
     camera.getWorldDirection(dir)
     dir.y = 0
     dir.normalize()
-    const HEAD_Y = 1.62 // 모델 머리 높이 — 카메라 눈높이에 맞춤
     const from = camera.position.clone().addScaledVector(dir, 1.6)
-    const to = camera.position.clone().addScaledVector(dir, 0.38)
+    const to = camera.position.clone().addScaledVector(dir, 0.42)
     chaserVisual.group.rotation.y = Math.atan2(-dir.x, -dir.z) // 카메라를 마주 봄
+
+    // 머리 본의 실제 월드 높이를 측정해 얼굴을 정확히 눈높이에 (스케일 가정 금지)
+    chaserVisual.group.position.set(from.x, 0, from.z)
+    chaserVisual.group.updateMatrixWorld(true)
+    const headObj =
+      chaserVisual.group.getObjectByName('head') ?? chaserVisual.group.getObjectByName('Head')
+    const headWorldY = headObj
+      ? headObj.getWorldPosition(new THREE.Vector3()).y
+      : 1.84
+    const groundY = camera.position.y - headWorldY
+
     flashlight.intensity = 0 // 손전등이 얼굴을 태우지 않게 — 붉은 섬광만
-    scareLight.position.copy(to).y = HEAD_Y + 0.2
-    scareLight.intensity = 26
-    ctx.fx.set({ rgbShift: 0.85, glitch: 0.4, vignette: 0.7 })
+    // 턱 아래 언더라이팅 — 얼굴에 그림자가 위로 지는 고전 공포 조명
+    scareLight.position.copy(camera.position).addScaledVector(dir, 0.18)
+    scareLight.position.y = camera.position.y - 0.35
+    scareLight.intensity = 30
+    ctx.fx.set({ rgbShift: 0.85, glitch: 0.35, vignette: 0.7 })
     for (let t = 0; t <= 1; t += 0.2) {
       const p = from.clone().lerp(to, t * t) // 가속하며 돌진
-      chaserVisual.group.position.set(p.x, camera.position.y - HEAD_Y, p.z)
+      chaserVisual.group.position.set(p.x, groundY, p.z)
       await wait(40)
     }
-    await wait(320)
+    await wait(650) // 얼굴을 볼 시간
     scareLight.intensity = 0
     flashlight.intensity = 28
     sound.synth?.stop('heartbeat')
@@ -135,9 +147,10 @@ export function makeChase(): GameScene {
     ctx.state.chaseFails++
     addJournal(ctx.state, 'chase_failed')
     await ctx.overlay.showCard('기록 손상 — 해당 구간을 재복원합니다', 1900)
-    // 리셋
+    // 리셋 — 크리처를 즉시 순찰 시작점으로 치운다 (잡힌 자리에 시체처럼 남지 않게)
     camera.position.copy(SPAWN)
     ai = makeAI(ctx.state.chaseFails)
+    chaserVisual.apply({ x: 0, z: -25 }, Math.PI, 16, 'walk')
     sound.synth?.start('heartbeat', 0.22)
     await ctx.overlay.showClickToContinue()
     ctx.modes.toFPS(true)
