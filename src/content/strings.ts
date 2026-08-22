@@ -59,7 +59,8 @@ export const STR = {
     card: '기록의 끝',
     postcredit: '한○○ · 진로 확인 필요',
     creditsNote: '이 데모는 복원된 기록의 일부입니다.',
-    creditsAssets: '3D: Gaunt Horror Creature © PurplePoint (CC-BY 4.0) · MakeHuman/MPFB2 (CC0)',
+    creditsAssets:
+      '3D: Crawling Mutated Human © Elisey · Gaunt Horror Creature © PurplePoint (CC-BY 4.0) · MakeHuman/MPFB2 (CC0)',
   },
   pause: { title: '일시정지', resume: '계속하기 (클릭)' },
 } as const

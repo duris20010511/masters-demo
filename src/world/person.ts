@@ -6,7 +6,7 @@ const MODEL_URL = {
   man: './assets/models/makehuman-suited.glb', // 옷 입은 변형만 사용 (베이스는 알몸)
   suit: './assets/models/makehuman-suited.glb',
   woman: './assets/models/makehuman-suited.glb',
-  monster: './assets/models/gaunt.glb', // Gaunt Horror Creature (CC-BY-4.0, PurplePoint)
+  monster: './assets/models/crawler.glb', // 기어오는 변이 인간 (CC-BY-4.0, Elisey) — crawl 애니 내장
 }
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
@@ -85,37 +85,36 @@ export interface Chaser {
 }
 
 /**
- * 추적자 — Gaunt Horror Creature (정적 모델).
- * 뼈대·애니메이션이 없는 대신 "손상된 기록" 세계관대로 **스톱모션 글리치 이동**:
- * 위치·방향이 걸음 간격마다 뚝뚝 끊기며 스냅되고, 스냅 순간 미세하게 뒤틀린다.
+ * 추적자 — 네발로 기어오는 변이 인간 (crawl 애니메이션 내장).
+ * 이동·회전은 지수 보간, 걸음은 애니메이션이 담당. 속도에 따라 재생 속도만 조절.
  */
 export function makeChaser(): Chaser {
   const g = new THREE.Group()
   const fallback = primitiveFallback(false)
   fallback.scale.setScalar(1.4)
   g.add(fallback)
-  // 출입증 — 어둠 속에서 빛나는 부분 (직위: 석사과정)
+  // 출입증 — 어둠 속에서 빛나는 부분 (직위: 석사과정). 기는 자세라 목 아래 낮게
   const badge = new THREE.Mesh(
     new THREE.PlaneGeometry(0.07, 0.1),
     new THREE.MeshBasicMaterial({ color: 0xf0ead8 }),
   )
-  badge.position.set(0.03, 1.35, 0.22)
+  badge.position.set(0.02, 0.5, 0.55)
   g.add(badge)
 
   let acc = 0
   let yaw = 0
-  let phase = 0
+  let mixer: THREE.AnimationMixer | null = null
 
   void loadModel(MODEL_URL.monster)
     .then(model => {
-      const root = model.scene.clone(true)
-      const box = new THREE.Box3().setFromObject(root) // 정적 메시 — Box3 신뢰 가능
+      const inst = instantiate(model)
+      // FBX 유래 모델은 단위가 제각각 — 바인드 포즈 높이가 상식 범위(0.5~3m)를
+      // 벗어나면 서 있는 인간 1.9m 기준으로 정규화
+      const box = new THREE.Box3().setFromObject(inst.root)
       const h = box.max.y - box.min.y
-      const s = 2.3 / h
-      root.scale.setScalar(s)
-      root.position.y = -box.min.y * s // 발이 y=0
+      if (h > 3 || h < 0.5) inst.root.scale.multiplyScalar(1.9 / h)
       // 텍스처는 살리고 어둠 속 실루엣만 배어나오게 약한 자발광
-      root.traverse(o => {
+      inst.root.traverse(o => {
         const mesh = o as THREE.Mesh
         if (mesh.isMesh) {
           const m = mesh.material as THREE.MeshStandardMaterial
@@ -125,8 +124,10 @@ export function makeChaser(): Chaser {
           }
         }
       })
+      playClip(inst.mixer, inst.clips, ['Layer0'], 0) // 단일 crawl 클립
       g.remove(fallback)
-      g.add(root)
+      g.add(inst.root)
+      mixer = inst.mixer
     })
     .catch(e => {
       console.warn('[chaser] load failed', e)
@@ -136,7 +137,7 @@ export function makeChaser(): Chaser {
     group: g,
     apply(pos, facing, dtMs, mode) {
       acc += dtMs
-      // 위치·방향 지수 보간 — 부드럽게 흘러오되
+      // 위치·방향 지수 보간 — 부드럽게
       const k = 1 - Math.exp(-dtMs / 90)
       g.position.x += (pos.x - g.position.x) * k
       g.position.z += (pos.z - g.position.z) * k
@@ -144,15 +145,11 @@ export function makeChaser(): Chaser {
       d = Math.atan2(Math.sin(d), Math.cos(d))
       yaw += d * k
       g.rotation.y = yaw
-
-      // 걸음 리듬의 생체 모션: 발걸음 봅 + 좌우 출렁임 + 달릴 때 전방 관성
-      const freq = mode === 'run' ? 7.2 : mode === 'walk' ? 3.4 : 1.1
-      phase += (dtMs / 1000) * freq * Math.PI
-      const bob = Math.sin(phase)
-      g.position.y = Math.abs(bob) * (mode === 'run' ? 0.1 : 0.05)
-      g.rotation.z = bob * (mode === 'run' ? 0.055 : 0.035)
-      g.rotation.x = (mode === 'run' ? 0.13 : 0.03) + Math.sin(phase * 0.5) * 0.02
-
+      // 기는 애니메이션 재생 속도 = 이동 속도
+      if (mixer) {
+        mixer.timeScale = mode === 'run' ? 1.8 : mode === 'walk' ? 1.0 : 0.35
+        mixer.update(dtMs / 1000)
+      }
       badge.rotation.z = Math.sin(acc * 0.0032) * 0.25
     },
   }
