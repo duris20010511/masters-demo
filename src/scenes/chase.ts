@@ -41,6 +41,9 @@ export function makeChase(): GameScene {
 
   const chaserVisual = makeChaser()
   scene.add(chaserVisual.group)
+  // 점프스케어 전용 붉은 섬광 (평소 강도 0 — 광원 상한 계산에서 제외)
+  const scareLight = new THREE.PointLight(0xff2318, 0, 4)
+  scene.add(scareLight)
 
   const controls = new FPSControls(camera)
   // 알코브 진입을 위해 x 경계는 넓게 잡고, 프레임마다 수동 클램프
@@ -100,11 +103,35 @@ export function makeChase(): GameScene {
   async function onCaught(): Promise<void> {
     busy = true
     ctx.modes.toUI()
+    sound.synth?.setHeartRate(1)
+    sound.synth?.play('whisper', 1)
     sound.synth?.play('glitch', 0.9)
+
+    // ── 점프스케어: 얼굴이 카메라 정면으로 들이닥친다 ──
+    const dir = new THREE.Vector3()
+    camera.getWorldDirection(dir)
+    dir.y = 0
+    dir.normalize()
+    const HEAD_Y = 1.62 // 모델 머리 높이 — 카메라 눈높이에 맞춤
+    const from = camera.position.clone().addScaledVector(dir, 1.6)
+    const to = camera.position.clone().addScaledVector(dir, 0.38)
+    chaserVisual.group.rotation.y = Math.atan2(-dir.x, -dir.z) // 카메라를 마주 봄
+    flashlight.intensity = 0 // 손전등이 얼굴을 태우지 않게 — 붉은 섬광만
+    scareLight.position.copy(to).y = HEAD_Y + 0.2
+    scareLight.intensity = 26
+    ctx.fx.set({ rgbShift: 0.85, glitch: 0.4, vignette: 0.7 })
+    for (let t = 0; t <= 1; t += 0.2) {
+      const p = from.clone().lerp(to, t * t) // 가속하며 돌진
+      chaserVisual.group.position.set(p.x, camera.position.y - HEAD_Y, p.z)
+      await wait(40)
+    }
+    await wait(320)
+    scareLight.intensity = 0
+    flashlight.intensity = 28
     sound.synth?.stop('heartbeat')
     ctx.fx.set({ glitch: 1, rgbShift: 0.9 })
-    await wait(700)
-    ctx.fx.set({ glitch: 0, rgbShift: 0, grain: 0.1 })
+    await wait(400)
+    ctx.fx.set({ glitch: 0, rgbShift: 0, grain: 0.1, vignette: 0.42 })
     ctx.state.chaseFails++
     addJournal(ctx.state, 'chase_failed')
     await ctx.overlay.showCard('기록 손상 — 해당 구간을 재복원합니다', 1900)
