@@ -5,6 +5,7 @@ import { PostFX } from './render/postfx'
 import { Overlay } from './ui/overlay'
 import { SceneManager } from './scenes/sceneManager'
 import { makeTitle } from './scenes/title'
+import { makeOpening } from './scenes/opening'
 import { makeLab } from './scenes/lab'
 import { makeEnding } from './scenes/ending'
 import { STR } from './content/strings'
@@ -60,9 +61,10 @@ const state = createState()
 
 const scenes = new SceneManager({ state, overlay, fx, modes, renderer })
 scenes.register('title', () => makeTitle())
+scenes.register('opening', () => makeOpening())
 scenes.register('cycle1', () => makeLab())
 scenes.register('ending', () => makeEnding())
-// opening / cycle2 / chase 는 이 슬라이스에서 미등록 → 유실 카드로 자동 통과
+// cycle2 / chase 는 아직 미등록 → 유실 카드로 자동 통과
 
 // Esc = 일시정지 (스펙 §11) — pointerlockchange 단일 진입점
 document.addEventListener('pointerlockchange', () => {
