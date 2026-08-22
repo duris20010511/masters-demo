@@ -156,7 +156,7 @@ export function makeLab(): GameScene {
   const steps = new FootstepTracker()
 
   function stepTarget(): THREE.Object3D | null {
-    return step === 'colleague' ? colleague : step === 'pc' ? pc : step === 'reader' ? freezer : null
+    return step === 'colleague' ? colleague : step === 'pc' ? pc : step === 'reader' ? door : null
   }
 
   async function interact(target: THREE.Object3D): Promise<void> {
@@ -172,11 +172,13 @@ export function makeLab(): GameScene {
     } else if (step === 'pc' && target === pc) {
       await runDocMinigame(ctx.state, ctx.overlay)
       step = 'reader'
-      void ctx.overlay.showSubtitle('냉동고 리더기가 출입증을 요구한다. (냉동고에 E)', 2200)
-    } else if (step === 'reader' && target === freezer) {
-      sound.synth?.play('beep_ok', 0.4)
-      await ctx.overlay.showBadge(ctx.state) // 출입증 강제 노출 (스펙 §3)
-      ctx.fx.pulse('glitch', 0.4, 300)
+      void ctx.overlay.showSubtitle('오늘은 여기까지 하자. 문을 나서자. (문에 E)', 2400)
+    } else if (step === 'reader' && target === door) {
+      // 퇴근 시도 → 문 리더기가 출입증을 요구 → 출입증 강제 노출 (스펙 §3)
+      sound.synth?.play('beep_error', 0.5)
+      await ctx.overlay.showBadge(ctx.state)
+      void ctx.overlay.showSubtitle('퇴실할 수 없습니다. 처리되지 않은 업무가 존재합니다.', 2400)
+      ctx.fx.pulse('glitch', 0.5, 400)
       step = 'done'
       ctx.advance()
       return
@@ -219,9 +221,9 @@ export function makeLab(): GameScene {
       controls.update(dt)
       if (!ctx) return
       if (ctx.modes.mode === 'fps') steps.update(camera.position)
-      // 대학원생들의 머리가 아주 천천히 플레이어를 따라온다
-      grad1.lookAt(camera.position, dt)
-      grad2.lookAt(camera.position, dt)
+      // 대학원생들의 머리가 아주 천천히 플레이어를 따라온다 (+숨쉬기·타이핑)
+      grad1.update(dt, camera.position)
+      grad2.update(dt, camera.position)
       if (ctx.modes.mode !== 'fps') {
         ctx.overlay.setCrosshair('off')
         aimed = null

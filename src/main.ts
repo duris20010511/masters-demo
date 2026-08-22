@@ -7,6 +7,7 @@ import { SceneManager } from './scenes/sceneManager'
 import { makeTitle } from './scenes/title'
 import { makeOpening } from './scenes/opening'
 import { makeLab } from './scenes/lab'
+import { makeChase } from './scenes/chase'
 import { makeEnding } from './scenes/ending'
 import { STR } from './content/strings'
 
@@ -63,8 +64,9 @@ const scenes = new SceneManager({ state, overlay, fx, modes, renderer })
 scenes.register('title', () => makeTitle())
 scenes.register('opening', () => makeOpening())
 scenes.register('cycle1', () => makeLab())
+scenes.register('chase', () => makeChase())
 scenes.register('ending', () => makeEnding())
-// cycle2 / chase 는 아직 미등록 → 유실 카드로 자동 통과
+// cycle2 는 아직 미등록 → 유실 카드로 자동 통과
 
 // Esc = 일시정지 (스펙 §11) — pointerlockchange 단일 진입점
 document.addEventListener('pointerlockchange', () => {

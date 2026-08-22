@@ -32,10 +32,20 @@ export class FPSControls {
     this.max = max
   }
 
+  /** 이번 프레임에 이동 중이고 Shift를 누른 상태인가 (추격전 소음 판정용) */
+  isRunning = false
+
   update(dtMs: number): void {
-    if (!this.enabled) return
+    if (!this.enabled) {
+      this.isRunning = false
+      return
+    }
     this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ')
-    const speed = 2.2 * (dtMs / 1000)
+    const moving =
+      this.keys.has('KeyW') || this.keys.has('KeyS') || this.keys.has('KeyA') || this.keys.has('KeyD')
+    const shift = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight')
+    this.isRunning = moving && shift
+    const speed = (this.isRunning ? 3.6 : 2.2) * (dtMs / 1000)
     const f = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw))
     const r = new THREE.Vector3(f.z, 0, -f.x)
     const p = this.camera.position
