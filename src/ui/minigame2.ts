@@ -31,15 +31,17 @@ export function resolveSampleGame(errors: number): {
   return { trust: -15, aptitude: 0, journal: 'cycle2_bad' }
 }
 
-export async function runSampleMinigame(
+export function runSampleMinigame(
   state: GameState,
   overlay: Overlay,
   rand: () => number = Math.random,
 ): Promise<void> {
+  // 주의: 반드시 미니게임이 실제로 끝난 뒤 resolve되어야 한다 (호출측이 다음 페이즈로 진행)
+  return new Promise(resolvePromise => {
   const panel = document.createElement('div')
   panel.className = 'interactive'
   panel.style.cssText =
-    'position:absolute;inset:7%;background:#2b2e33;color:#e4e7e9;padding:24px;overflow:auto;border:2px solid #626870;box-shadow:inset 0 0 42px #111;font-size:14px'
+    'position:absolute;left:50%;top:6%;transform:translateX(-50%);width:min(560px,82vw);max-height:76vh;background:rgba(43,46,51,0.96);color:#e4e7e9;padding:20px;overflow:auto;border:2px solid #626870;box-shadow:inset 0 0 42px #111, 0 12px 40px rgba(0,0,0,.6);font-size:14px'
   document.getElementById('ui')!.appendChild(panel)
 
   const resolved = new Map<number, SampleAction>()
@@ -79,6 +81,7 @@ export async function runSampleMinigame(
         await overlay.showSubtitle(STR.sample.caught, 1800)
       }
     }
+    resolvePromise()
   }
 
   const render = (): void => {
@@ -125,4 +128,5 @@ export async function runSampleMinigame(
   })
 
   render()
+  })
 }

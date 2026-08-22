@@ -9,11 +9,12 @@ const MODEL_URL = {
   monster: './assets/models/crawler.glb', // 기어오는 변이 인간 (CC-BY-4.0, Elisey) — crawl 애니 내장
 }
 
-// 모델별 원본 단위가 제각각(오프라인 실측: 106343 / 189.4 / 176.8 유닛) — 실측 기반 고정 스케일
+// 스킨드 메시는 지오메트리 경계가 무의미 — **관절(joint) 바인드 위치** 실측 기반 고정 스케일
+// (man 1.73m / woman 3.35m / suit 1.70m 원본)
 const PERSON_SCALE: Record<'man' | 'suit' | 'woman', number> = {
-  man: 1.74 / 106343.34,
-  suit: 1.76 / 189.4,
-  woman: 1.66 / 176.78,
+  man: 1.0,
+  suit: 1.035,
+  woman: 1.66 / 3.35,
 }
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
@@ -121,11 +122,8 @@ export function makeChaser(): Chaser {
       const inst = instantiate(model)
       // FBX 유래 모델은 단위가 제각각 — 바인드 포즈 높이가 상식 범위(0.5~3m)를
       // 벗어나면 서 있는 인간 1.9m 기준으로 정규화
-      // 조건부 스케일은 두 번 틀렸다 — 무조건 실측 정규화: 서면 2.6m 상당 (기면 ~1.1m)
-      const box = new THREE.Box3().setFromObject(inst.root)
-      const h = box.max.y - box.min.y
-      console.log('[chaser] bind height', h.toFixed(2))
-      if (h > 0.01) inst.root.scale.multiplyScalar(2.6 / h)
+      // 관절 바인드 실측: 몸길이 174.5유닛 → 기는 몸길이 2.4m 목표
+      inst.root.scale.multiplyScalar(2.4 / 174.5)
       // 텍스처는 살리고 어둠 속 실루엣만 배어나오게 약한 자발광
       inst.root.traverse(o => {
         const mesh = o as THREE.Mesh

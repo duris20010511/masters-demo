@@ -31,7 +31,7 @@ export async function runDocMinigame(
   const sheet = document.createElement('div')
   sheet.className = 'interactive'
   sheet.style.cssText =
-    'position:absolute;inset:8%;background:#e8e6df;color:#222;padding:24px;font-size:14px;overflow:auto;border:2px solid #999'
+    'position:absolute;left:50%;top:6%;transform:translateX(-50%);width:min(560px,82vw);max-height:76vh;background:#e8e6df;color:#222;padding:20px;font-size:14px;overflow:auto;border:2px solid #999;box-shadow:0 12px 40px rgba(0,0,0,.5)'
   sheet.innerHTML = `<h3>${STR.doc.taskTitle}</h3><table style="width:100%;border-collapse:collapse"></table>`
   document.getElementById('ui')!.appendChild(sheet)
   const table = sheet.querySelector('table')!

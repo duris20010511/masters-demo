@@ -48,6 +48,8 @@ export function instantiate(
   root.traverse(o => {
     const mesh = o as THREE.Mesh
     if (mesh.isMesh) {
+      // 스킨드 메시는 언스킨 지오메트리 경계로 컬링돼 통째로 사라질 수 있다
+      mesh.frustumCulled = false
       mesh.castShadow = true
       mesh.receiveShadow = true
       if (opts.tint !== undefined) {
