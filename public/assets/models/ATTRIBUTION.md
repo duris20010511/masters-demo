@@ -1,5 +1,14 @@
 # Third-party model attribution
 
+## 연구실 인물 3종
+
+- `colleague-man.glb` — "casual male-architectural Updated" © manoeldarochadeoliveira
+  (https://sketchfab.com/manoeldarochadeoliveira) — CC-BY-4.0
+- `professor.glb` — "Business Man - Low Polygon game character" © manoeldarochadeoliveira — CC-BY-4.0
+- `colleague-woman.glb` — "Woman Standing Idle" © yuriannoue
+  (https://sketchfab.com/yuriannoue) — CC-BY-4.0
+- 사용처: 연구실 대학원생 NPC (남/여), 교수(예정). 크레딧은 엔딩에 표기.
+
 ## Crawling Mutated Human (추격전 크리처)
 
 - File: `crawler.glb`

@@ -1,12 +1,19 @@
 import * as THREE from 'three'
 import { loadModel, instantiate, playClip } from './models'
 
-// MakeHuman/MPFB 2 기반 CC0 디지털 휴먼. 텍스처와 locomotion clip이 GLB에 내장되어 있다.
+// Sketchfab CC-BY 인물 3종 (ATTRIBUTION.md 참조) + 크리처
 const MODEL_URL = {
-  man: './assets/models/makehuman-suited.glb', // 옷 입은 변형만 사용 (베이스는 알몸)
-  suit: './assets/models/makehuman-suited.glb',
-  woman: './assets/models/makehuman-suited.glb',
+  man: './assets/models/colleague-man.glb', // 캐주얼 재킷 남성 (manoeldarochadeoliveira)
+  suit: './assets/models/professor.glb', // 정장 남성 — 교수용 (같은 작가)
+  woman: './assets/models/colleague-woman.glb', // 안경+니트 여성 (yuriannoue)
   monster: './assets/models/crawler.glb', // 기어오는 변이 인간 (CC-BY-4.0, Elisey) — crawl 애니 내장
+}
+
+// 모델별 원본 단위가 제각각(오프라인 실측: 106343 / 189.4 / 176.8 유닛) — 실측 기반 고정 스케일
+const PERSON_SCALE: Record<'man' | 'suit' | 'woman', number> = {
+  man: 1.74 / 106343.34,
+  suit: 1.76 / 189.4,
+  woman: 1.66 / 176.78,
 }
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
@@ -44,14 +51,18 @@ export function makePerson(
   let headRestY = 0
   let headYaw = 0
 
-  void loadModel(MODEL_URL[opts.variant ?? 'man'])
+  const variant = opts.variant ?? 'man'
+  void loadModel(MODEL_URL[variant])
     .then(model => {
-      const inst = instantiate(model, { scale: 1.0 })
+      const inst = instantiate(model, { scale: PERSON_SCALE[variant] })
       playClip(inst.mixer, inst.clips, ['Idle'])
       g.remove(fallback)
       g.add(inst.root)
       mixer = inst.mixer
-      headBone = inst.root.getObjectByName('head') ?? inst.root.getObjectByName('Head') ?? null
+      // 머리 본은 리그마다 이름이 다르다: Head, Head_06, Head_044 …
+      inst.root.traverse(o => {
+        if (!headBone && /^head[_0-9]*$/i.test(o.name)) headBone = o
+      })
       headRestY = headBone?.rotation.y ?? 0
     })
     .catch(e => {
