@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { GameScene, SceneCtx } from './sceneManager'
 import { FPSControls } from '../input/controls'
 import { runDocMinigame } from '../ui/minigame1'
+import { runSampleMinigame } from '../ui/minigame2'
 import { applyStat } from '../core/state'
 import { STR } from '../content/strings'
 import { makePerson } from '../world/person'
@@ -45,7 +46,7 @@ function ownerOf(obj: THREE.Object3D, targets: THREE.Object3D[]): THREE.Object3D
   return null
 }
 
-export function makeLab(): GameScene {
+export function makeLab(cycle: 1 | 2 = 1): GameScene {
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x1a1a1f) // 창밖은 밤
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 50)
@@ -98,11 +99,11 @@ export function makeLab(): GameScene {
   }
 
   // ── 앉아 있는 대학원생 2 (얼굴 없음, 머리만 아주 천천히 따라옴) ──
-  const grad1 = makePerson({ seated: true })
+  const grad1 = makePerson({ seated: true, variant: 'man' })
   grad1.group.position.set(2.5, 0.45, -2.45) // 책상(2.5,-3) 의자에, 모니터를 향해 등 보임
   grad1.group.rotation.y = Math.PI
   scene.add(grad1.group)
-  const grad2 = makePerson({ seated: true })
+  const grad2 = makePerson({ seated: true, variant: 'woman' })
   grad2.group.position.set(-2.5, 0.45, 0.55)
   grad2.group.rotation.y = Math.PI
   scene.add(grad2.group)
@@ -151,12 +152,21 @@ export function makeLab(): GameScene {
   controls.setBounds(new THREE.Vector3(-3.3, 1.6, -4.2), new THREE.Vector3(3.3, 1.6, 4.4))
   const ray = new THREE.Raycaster()
   let ctx!: SceneCtx
-  let step: 'colleague' | 'pc' | 'reader' | 'done' = 'colleague'
+  let step: 'colleague' | 'pc' | 'reader' | 'freezer' | 'done' =
+    cycle === 1 ? 'colleague' : 'freezer'
   let aimed: THREE.Object3D | null = null
   const steps = new FootstepTracker()
 
   function stepTarget(): THREE.Object3D | null {
-    return step === 'colleague' ? colleague : step === 'pc' ? pc : step === 'reader' ? door : null
+    return step === 'colleague'
+      ? colleague
+      : step === 'pc'
+        ? pc
+        : step === 'reader'
+          ? door
+          : step === 'freezer'
+            ? freezer
+            : null
   }
 
   async function interact(target: THREE.Object3D): Promise<void> {
@@ -173,6 +183,14 @@ export function makeLab(): GameScene {
       await runDocMinigame(ctx.state, ctx.overlay)
       step = 'reader'
       void ctx.overlay.showSubtitle('오늘은 여기까지 하자. 문을 나서자. (문에 E)', 2400)
+    } else if (step === 'freezer' && target === freezer) {
+      // 사이클 ②: 샘플 분류 (Codex 작업 #4)
+      sound.synth?.play('beep_ok', 0.35)
+      await runSampleMinigame(ctx.state, ctx.overlay)
+      step = 'done'
+      await ctx.overlay.showCard('면담실로 오게. — 교수', 2400)
+      ctx.advance()
+      return
     } else if (step === 'reader' && target === door) {
       // 퇴근 시도 → 문 리더기가 출입증을 요구 → 출입증 강제 노출 (스펙 §3)
       sound.synth?.play('beep_error', 0.5)
@@ -203,13 +221,19 @@ export function makeLab(): GameScene {
       ctx = c
       document.addEventListener('keydown', onKey)
       ctx.modes.onChange(m => { controls.enabled = m === 'fps' })
-      ctx.fx.set({ grain: 0.06, vignette: 0.18 }) // 밝은 랩실에선 절제
+      // 사이클 ②는 이상현상 강도 상승 (스펙 §3)
+      ctx.fx.set({ grain: cycle === 2 ? 0.1 : 0.06, vignette: cycle === 2 ? 0.26 : 0.18 })
       sound.synth?.start('hum', 0.18) // 형광등 험
       await ctx.overlay.showCard('??:??', 1200)
       // PointerLock은 유저 제스처 내에서만 허용 — 클릭 게이트로 재잠금
       await ctx.overlay.showClickToContinue()
       ctx.modes.toFPS(true)
-      void ctx.overlay.showSubtitle('동료가 말을 걸어온다. (동료에게 다가가 E)', 2600)
+      void ctx.overlay.showSubtitle(
+        cycle === 1
+          ? '동료가 말을 걸어온다. (동료에게 다가가 E)'
+          : '오늘 들어온 조직 샘플을 정리해야 한다. (냉동고에 E)',
+        2600,
+      )
     },
     exit() {
       document.removeEventListener('keydown', onKey)

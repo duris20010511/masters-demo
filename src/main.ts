@@ -63,10 +63,11 @@ const state = createState()
 const scenes = new SceneManager({ state, overlay, fx, modes, renderer })
 scenes.register('title', () => makeTitle())
 scenes.register('opening', () => makeOpening())
-scenes.register('cycle1', () => makeLab())
+scenes.register('cycle1', () => makeLab(1))
+scenes.register('cycle2', () => makeLab(2))
 scenes.register('chase', () => makeChase())
 scenes.register('ending', () => makeEnding())
-// cycle2 는 아직 미등록 → 유실 카드로 자동 통과
+// 전 페이즈 실제 씬 등록 완료 — 유실 카드 없음
 
 // Esc = 일시정지 (스펙 §11) — pointerlockchange 단일 진입점
 document.addEventListener('pointerlockchange', () => {

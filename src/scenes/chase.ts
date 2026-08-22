@@ -152,7 +152,12 @@ export function makeChase(): GameScene {
         playerIsRunning: controls.isRunning,
         occluded: isOccluded(),
       })
-      chaserVisual.apply(out.pos, out.facing, dt)
+      chaserVisual.apply(
+        out.pos,
+        out.facing,
+        dt,
+        out.state === 'chase' ? 'run' : out.state === 'search' ? 'idle' : 'walk',
+      )
 
       // 근접 연출: 거리 = 심장 박동·글리치 강도
       const d = Math.hypot(out.pos.x - camera.position.x, out.pos.z - camera.position.z)
