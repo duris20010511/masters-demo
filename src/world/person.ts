@@ -38,6 +38,8 @@ export interface Person {
   group: THREE.Group
   /** 애니메이션 진행 + 머리만 아주 천천히 목표를 향해 회전 */
   update(dtMs: number, lookTarget?: THREE.Vector3): void
+  /** 이름(부분 일치)으로 클립 크로스페이드 전환 — 예: play(['walk']) */
+  play(names: string[]): void
 }
 
 export function makePerson(
@@ -48,18 +50,38 @@ export function makePerson(
   g.add(fallback)
 
   let mixer: THREE.AnimationMixer | null = null
+  let clips: THREE.AnimationClip[] = []
+  let currentAction: THREE.AnimationAction | null = null
+  let pendingPlay: string[] | null = null
   let headBone: THREE.Object3D | null = null
   let headRestY = 0
   let headYaw = 0
+
+  function crossfade(names: string[]): void {
+    if (!mixer) return
+    const clip = names
+      .map(n => clips.find(c => c.name.toLowerCase().includes(n.toLowerCase())))
+      .find(Boolean)
+    if (!clip || currentAction?.getClip() === clip) return
+    const action = mixer.clipAction(clip)
+    action.reset().fadeIn(0.3).play()
+    currentAction?.fadeOut(0.3)
+    currentAction = action
+  }
 
   const variant = opts.variant ?? 'man'
   void loadModel(MODEL_URL[variant])
     .then(model => {
       const inst = instantiate(model, { scale: PERSON_SCALE[variant] })
-      playClip(inst.mixer, inst.clips, ['Idle'])
+      currentAction = playClip(inst.mixer, inst.clips, ['Idle'])
       g.remove(fallback)
       g.add(inst.root)
       mixer = inst.mixer
+      clips = inst.clips
+      if (pendingPlay) {
+        crossfade(pendingPlay)
+        pendingPlay = null
+      }
       // 머리 본은 리그마다 이름이 다르다: Head, Head_06, Head_044 …
       inst.root.traverse(o => {
         if (!headBone && /^head[_0-9]*$/i.test(o.name)) headBone = o
@@ -84,6 +106,10 @@ export function makePerson(
         headYaw += Math.max(-maxTurn, Math.min(maxTurn, want - headYaw))
         headBone.rotation.y += headYaw
       }
+    },
+    play(names: string[]) {
+      if (mixer) crossfade(names)
+      else pendingPlay = names // 로드 전 호출 대비
     },
   }
 }

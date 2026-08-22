@@ -67,23 +67,24 @@ export function makeOpening(): GameScene {
       camera.rotation.x = sx * (1 - e)
       await wait(52)
     }
-    // 교수가 천천히 다가온다
+    // 교수가 걸어서 다가온다 (walk 클립 + 일정 속도)
     void o.showSubtitle('교수: "이걸 두고 가면 어떡해."', 2600)
+    prof.play(['walk'])
     const fromZ = prof.group.position.z
     const toZ = px.z + 1.25
     for (let i = 1; i <= 36; i++) {
-      const t = i / 36
-      const e = t * t * (3 - 2 * t)
-      prof.group.position.z = fromZ + (toZ - fromZ) * e
+      prof.group.position.z = fromZ + (toZ - fromZ) * (i / 36) // 걷기는 등속이 자연스럽다
       if (i % 9 === 0) sound.synth?.play('footstep', 0.18)
-      await wait(70)
+      await wait(72)
     }
+    prof.play(['cycle_talking'])
     await wait(400)
     // 출입증을 걸어준다
     sound.synth?.play('beep_ok', 0.3)
     await o.showBadge(ctx.state)
     void o.showSubtitle('교수: "연구실 사람은 이거 없으면 안 되지."', 2200)
     await wait(2300)
+    prof.play(['Idle'])
     await o.showSubtitle('교수: "내일 일찍 와."', 1900)
     // 시계 파괴
     await o.showCard('21:47', 1100)
