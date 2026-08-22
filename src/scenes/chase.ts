@@ -137,7 +137,12 @@ export function makeChase(): GameScene {
       chaserVisual.group.position.set(p.x, groundY, p.z)
       await wait(40)
     }
-    await wait(650) // 얼굴을 볼 시간
+    // 응시 — 스트로브 + 이펙트 지터로 릴 특유의 "뭉개진 얼굴" 질감
+    for (let i = 0; i < 7; i++) {
+      scareLight.intensity = i % 2 === 0 ? 34 : 10
+      ctx.fx.set({ rgbShift: 0.6 + (i % 3) * 0.15, glitch: 0.25 + (i % 2) * 0.2 })
+      await wait(90)
+    }
     scareLight.intensity = 0
     flashlight.intensity = 28
     sound.synth?.stop('heartbeat')
