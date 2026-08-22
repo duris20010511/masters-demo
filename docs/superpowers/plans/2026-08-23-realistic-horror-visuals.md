@@ -4,7 +4,7 @@
 
 **Goal:** Replace the toy-like cast with textured digital humans and a silhouette-first distorted chaser.
 
-**Architecture:** A CC0 digital-human GLB is the common base. `person.ts` creates laboratory instances from its PBR materials and a bone-distorted chaser instance. `main.ts` owns filmic renderer settings; scenes own their lights.
+**Architecture:** A CC0 MakeHuman GLB is the common base. `person.ts` creates laboratory instances from its PBR materials and a bone-distorted chaser instance. `main.ts` owns filmic renderer settings; scenes own their lights.
 
 **Tech Stack:** TypeScript, Three.js r170, GLTFLoader, Vitest, Vite.
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Ship self-contained GLB assets only under `public/assets/models/`.
-- Use the CC0 `vitruvian_body.glb` asset from `ibrews/VitruvianGodot`.
+- Use the CC0 `human.glb` asset from `kunalkushwaha/vsim`.
 - Keep primitive load-failure fallbacks and add no runtime dependency.
 - Record third-party provenance in `public/assets/models/ATTRIBUTION.md`.
 
@@ -23,12 +23,12 @@
 
 **Files:**
 
-- Create: `public/assets/models/vitruvian_body.glb`
+- Create: `public/assets/models/makehuman.glb`
 - Create: `public/assets/models/ATTRIBUTION.md`
 
-- [ ] Download the public source with `git clone --depth 1 https://github.com/ibrews/VitruvianGodot.git` into a temporary directory.
-- [ ] Copy only `godot_project/vitruvian_body.glb` after confirming it has embedded textures and is below the configured triangle limit.
-- [ ] Write attribution containing the source URL, `vitruvian_body.glb` filename, CC0 1.0 license, and its use as the laboratory/chaser base.
+- [ ] Download the public source with `git clone --depth 1 https://github.com/kunalkushwaha/vsim.git` into a temporary directory.
+- [ ] Copy only `packages/assets/library/human.glb` after confirming it has embedded textures and is below the configured triangle limit.
+- [ ] Write attribution containing the source URL, `human.glb` filename, CC0 1.0 license, and its use as the laboratory/chaser base.
 - [ ] Run `git status --short` and commit with `git commit -m "assets: add CC0 digital human"`.
 
 ### Task 2: Keep PBR maps while creating a distorted chaser

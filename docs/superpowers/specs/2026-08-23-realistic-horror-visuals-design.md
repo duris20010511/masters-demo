@@ -16,6 +16,10 @@ The supplied references use realistic human proportions and textured surfaces ra
 - Require a maximum 100k triangles for an animated chaser and 75k triangles per background human. Larger assets must be reduced offline before inclusion.
 - Do not use assets that require a login, a paid license, or attribution terms that cannot be met in the repository.
 
+## Selected source asset
+
+Use the self-contained `human.glb` from `kunalkushwaha/vsim`. It is a 36,972-triangle MakeHuman/MPFB 2 adult with embedded skin texture and `idle`, `run`, `walk`, and `wave` clips. Its bundled credits document the MakeHuman output and its skin/clothing assets as CC0.
+
 ## Chaser
 
 Use one humanoid horror model with PBR material maps. Its full body is never brightly lit: a dark non-metallic material retains the source normal/roughness maps, while a subtle red emissive accent appears only on the badge. Walk/run locomotion continues to use available clips; a model without clips receives root motion and a restrained procedural torso sway rather than an unanimated static pose.
