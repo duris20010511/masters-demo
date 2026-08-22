@@ -139,13 +139,14 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   scene.add(box(0.5, 0.06, 0.3, M.lamp, 3.4, 1.62, 3.78)) // 리더기 패널
   scene.add(freezer)
 
-  // ── 라이팅: "지나치게 밝은 연구실" (스펙 §10-1, 그림자 금지) ──
-  scene.add(new THREE.HemisphereLight(0xb7c9dd, 0x20252e, 0.45))
-  scene.add(new THREE.AmbientLight(0xcad7e4, 0.18))
-  const p1 = new THREE.PointLight(0xddeeff, 18, 10)
+  // ── 라이팅: "지나치게 밝은 연구실" — 컨셉의 핵심은 과도한 밝음 (스펙 §10-1)
+  // ACES 톤매핑(노출 0.9) 하에서 과노출 형광등 느낌이 나도록 상향 보정
+  scene.add(new THREE.HemisphereLight(0xfff6e8, 0x8a8a96, 2.2))
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5))
+  const p1 = new THREE.PointLight(0xfff2dc, 34, 13)
   p1.position.set(0, 2.7, -2)
   scene.add(p1)
-  const p2 = new THREE.PointLight(0xb9d8e8, 18, 10)
+  const p2 = new THREE.PointLight(0xfff2dc, 34, 13)
   p2.position.set(0, 2.7, 2)
   scene.add(p2)
 

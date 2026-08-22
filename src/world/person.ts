@@ -41,6 +41,7 @@ export function makePerson(
 
   let mixer: THREE.AnimationMixer | null = null
   let headBone: THREE.Object3D | null = null
+  let headRestY = 0
   let headYaw = 0
 
   void loadModel(MODEL_URL[opts.variant ?? 'man'])
@@ -51,6 +52,7 @@ export function makePerson(
       g.add(inst.root)
       mixer = inst.mixer
       headBone = inst.root.getObjectByName('head') ?? inst.root.getObjectByName('Head') ?? null
+      headRestY = headBone?.rotation.y ?? 0
     })
     .catch(e => {
       console.warn('[person] load failed', e)
@@ -59,8 +61,10 @@ export function makePerson(
   return {
     group: g,
     update(dtMs: number, lookTarget?: THREE.Vector3) {
+      // 클립이 머리 본을 애니메이션하지 않는 모델에서 += 가 누적되지 않도록,
+      // 믹서 전에 기본값으로 되돌리고(애니메이션이 있으면 믹서가 덮어씀) 후에 얹는다
+      if (headBone) headBone.rotation.y = headRestY
       mixer?.update(dtMs / 1000)
-      // 믹서가 포즈를 덮어쓴 뒤에 머리 회전을 얹는다
       if (headBone && lookTarget) {
         const local = g.worldToLocal(lookTarget.clone())
         const want = Math.max(-0.9, Math.min(0.9, Math.atan2(local.x, local.z)))

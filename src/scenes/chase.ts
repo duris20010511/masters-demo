@@ -35,6 +35,8 @@ export function makeChase(): GameScene {
   flashlight.position.set(0, 0, 0)
   flashlight.target.position.set(0, 0, -1)
   camera.add(flashlight, flashlight.target)
+  // 카메라 자식(손전등)은 카메라가 씬 그래프에 있어야만 렌더링에 반영된다
+  scene.add(camera)
 
   const chaserVisual = makeChaser()
   scene.add(chaserVisual.group)
