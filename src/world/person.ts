@@ -103,8 +103,8 @@ export function makeChaser(): Chaser {
   g.add(badge)
 
   let acc = 0
-  let stepT = 0
-  const target = { x: 0, z: 0, facing: 0 }
+  let yaw = 0
+  let phase = 0
 
   void loadModel(MODEL_URL.monster)
     .then(model => {
@@ -136,21 +136,23 @@ export function makeChaser(): Chaser {
     group: g,
     apply(pos, facing, dtMs, mode) {
       acc += dtMs
-      stepT += dtMs
-      target.x = pos.x
-      target.z = pos.z
-      target.facing = facing
-      // 스톱모션: 걸음 간격마다만 실제 위치를 스냅 (뛸수록 간격이 짧아짐)
-      const stepMs = mode === 'run' ? 130 : mode === 'walk' ? 300 : 550
-      if (stepT >= stepMs) {
-        stepT = 0
-        g.position.set(target.x, 0, target.z)
-        g.rotation.y = target.facing
-        // 스냅 순간의 뒤틀림 — 프레임 깨진 데이터처럼
-        const j = Math.sin(acc * 0.013)
-        g.rotation.z = j * 0.05
-        g.rotation.x = mode === 'run' ? 0.09 + j * 0.03 : j * 0.02
-      }
+      // 위치·방향 지수 보간 — 부드럽게 흘러오되
+      const k = 1 - Math.exp(-dtMs / 90)
+      g.position.x += (pos.x - g.position.x) * k
+      g.position.z += (pos.z - g.position.z) * k
+      let d = facing - yaw
+      d = Math.atan2(Math.sin(d), Math.cos(d))
+      yaw += d * k
+      g.rotation.y = yaw
+
+      // 걸음 리듬의 생체 모션: 발걸음 봅 + 좌우 출렁임 + 달릴 때 전방 관성
+      const freq = mode === 'run' ? 7.2 : mode === 'walk' ? 3.4 : 1.1
+      phase += (dtMs / 1000) * freq * Math.PI
+      const bob = Math.sin(phase)
+      g.position.y = Math.abs(bob) * (mode === 'run' ? 0.1 : 0.05)
+      g.rotation.z = bob * (mode === 'run' ? 0.055 : 0.035)
+      g.rotation.x = (mode === 'run' ? 0.13 : 0.03) + Math.sin(phase * 0.5) * 0.02
+
       badge.rotation.z = Math.sin(acc * 0.0032) * 0.25
     },
   }
