@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { createState } from './core/state'
 import { ModeManager, lockState } from './input/modes'
 import { PostFX } from './render/postfx'
+import { configureRenderer } from './render/rendererConfig'
 import { Overlay } from './ui/overlay'
 import { SceneManager } from './scenes/sceneManager'
 import { makeTitle } from './scenes/title'
@@ -22,6 +23,7 @@ if (matchMedia('(pointer: coarse)').matches) {
 }
 
 const renderer = new THREE.WebGLRenderer({ antialias: false })
+configureRenderer(renderer)
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5))
 renderer.setSize(innerWidth, innerHeight)
 app.appendChild(renderer.domElement)

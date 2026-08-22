@@ -7,6 +7,24 @@ export interface LoadedModel {
   animations: THREE.AnimationClip[]
 }
 
+export function tintMaterial(material: THREE.Material, color: number): THREE.Material {
+  if (!(material instanceof THREE.MeshStandardMaterial)) return material.clone()
+  const tinted = material.clone()
+  tinted.color.setHex(color)
+  tinted.roughness = Math.max(tinted.roughness, 0.82)
+  tinted.metalness = 0
+  tinted.emissive.setHex(0x140000)
+  tinted.emissiveIntensity = 0.12
+  return tinted
+}
+
+export function distortChaser(root: THREE.Object3D): void {
+  for (const name of ['lowerarm_l', 'lowerarm_r', 'thigh_l', 'thigh_r']) {
+    const bone = root.getObjectByName(name)
+    if (bone) bone.scale.y = 1.35
+  }
+}
+
 const loader = new GLTFLoader()
 const cache = new Map<string, Promise<LoadedModel>>()
 
@@ -30,12 +48,12 @@ export function instantiate(
   root.traverse(o => {
     const mesh = o as THREE.Mesh
     if (mesh.isMesh) {
-      mesh.castShadow = false
-      mesh.receiveShadow = false
+      mesh.castShadow = true
+      mesh.receiveShadow = true
       if (opts.tint !== undefined) {
-        const m = (mesh.material as THREE.MeshStandardMaterial).clone()
-        m.color = new THREE.Color(opts.tint)
-        mesh.material = m
+        mesh.material = Array.isArray(mesh.material)
+          ? mesh.material.map(material => tintMaterial(material, opts.tint!))
+          : tintMaterial(mesh.material, opts.tint)
       }
     }
   })

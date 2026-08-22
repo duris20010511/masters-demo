@@ -140,12 +140,12 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   scene.add(freezer)
 
   // ── 라이팅: "지나치게 밝은 연구실" (스펙 §10-1, 그림자 금지) ──
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x9a9aa8, 2.6))
-  scene.add(new THREE.AmbientLight(0xffffff, 0.55))
-  const p1 = new THREE.PointLight(0xfff4e0, 30, 14)
+  scene.add(new THREE.HemisphereLight(0xb7c9dd, 0x20252e, 0.45))
+  scene.add(new THREE.AmbientLight(0xcad7e4, 0.18))
+  const p1 = new THREE.PointLight(0xddeeff, 18, 10)
   p1.position.set(0, 2.7, -2)
   scene.add(p1)
-  const p2 = new THREE.PointLight(0xfff4e0, 30, 14)
+  const p2 = new THREE.PointLight(0xb9d8e8, 18, 10)
   p2.position.set(0, 2.7, 2)
   scene.add(p2)
 
