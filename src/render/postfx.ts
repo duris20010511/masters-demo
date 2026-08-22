@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { GLITCH_SHADER } from './glitchShader'
 
 export interface FxLevels { vignette: number; grain: number; glitch: number; rgbShift: number }
@@ -28,6 +29,8 @@ export class PostFX {
     this.pass = new ShaderPass(GLITCH_SHADER as never)
     this.composer.addPass(this.renderPass)
     this.composer.addPass(this.pass)
+    // 톤매핑(ACES)·sRGB 변환은 OutputPass가 없으면 컴포저 체인에서 적용되지 않는다
+    this.composer.addPass(new OutputPass())
   }
 
   setScene(scene: THREE.Scene, camera: THREE.Camera): void {

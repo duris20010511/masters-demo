@@ -3,10 +3,10 @@ import { distortChaser, loadModel, instantiate, playClip } from './models'
 
 // MakeHuman/MPFB 2 기반 CC0 디지털 휴먼. 텍스처와 locomotion clip이 GLB에 내장되어 있다.
 const MODEL_URL = {
-  man: './assets/models/makehuman-man.glb',
+  man: './assets/models/makehuman-suited.glb', // 옷 입은 변형만 사용 (베이스는 알몸)
   suit: './assets/models/makehuman-suited.glb',
-  woman: './assets/models/makehuman.glb',
-  monster: './assets/models/makehuman-man.glb',
+  woman: './assets/models/makehuman-suited.glb',
+  monster: './assets/models/makehuman-man.glb', // 추적자는 맨몸+왜곡 — 오히려 섬뜩함
 }
 
 const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
