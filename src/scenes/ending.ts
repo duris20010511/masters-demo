@@ -29,8 +29,11 @@ export function makeEnding(): GameScene {
       await o.showSubtitle(STR.ending.corrupt, 1600)
       await o.showSubtitle(STR.ending.accept, 2400)
 
-      // 3. 기록 끊김 (스펙 §9-3)
-      await o.showCard(STR.ending.exit, 2000)
+      // 3. 기록 끊김 (스펙 §9-3) — 퇴실을 요청했더니 진학이 처리된다
+      await o.showCard(STR.ending.exitRequest, 1800)
+      ctx.fx.pulse('glitch', 0.35, 400)
+      await wait(700)
+      await o.showCard(STR.ending.exit, 2300)
       ctx.fx.set({ glitch: 1, rgbShift: 0.8 })
       await wait(900)
       ctx.fx.set({ glitch: 0, rgbShift: 0, grain: 0.05 })
