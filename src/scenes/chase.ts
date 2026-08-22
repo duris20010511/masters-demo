@@ -3,6 +3,7 @@ import type { GameScene, SceneCtx } from './sceneManager'
 import { FPSControls } from '../input/controls'
 import { buildCorridor, CORRIDOR } from '../world/corridor'
 import { makeChaser } from '../world/person'
+import { loadModel } from '../world/models'
 import { ChaserAI } from '../chase/chaserAI'
 import { addJournal } from '../core/journal'
 import { sound, FootstepTracker } from '../audio/sound'
@@ -44,6 +45,27 @@ export function makeChase(): GameScene {
   // 점프스케어 전용 붉은 섬광 (평소 강도 0 — 광원 상한 계산에서 제외)
   const scareLight = new THREE.PointLight(0xff2318, 0, 4)
   scene.add(scareLight)
+
+  // 점프스케어 전용 히어로 크리처 (Gaunt Horror Creature, PurplePoint CC-BY-4.0)
+  // 정적 모델 — 추격 본체는 애니메이션 있는 왜곡 인간이 맡고, 들이닥치는 얼굴만 이걸로 스왑
+  let scareFigure: THREE.Group | null = null
+  let scareFaceY = 1.9
+  void loadModel('./assets/models/gaunt.glb')
+    .then(m => {
+      const root = m.scene.clone(true)
+      const box = new THREE.Box3().setFromObject(root) // 뼈대 없는 정적 메시 — Box3 신뢰 가능
+      const h = box.max.y - box.min.y
+      const s = 2.3 / h
+      root.scale.setScalar(s)
+      root.position.y = -box.min.y * s // 발이 y=0
+      scareFaceY = h * 0.88 * s // 얼굴 ≈ 키의 88% 지점
+      const wrap = new THREE.Group()
+      wrap.add(root)
+      wrap.visible = false
+      scene.add(wrap)
+      scareFigure = wrap
+    })
+    .catch(e => console.warn('[scare] gaunt load failed', e))
 
   const controls = new FPSControls(camera)
   // 알코브 진입을 위해 x 경계는 넓게 잡고, 프레임마다 수동 클램프
@@ -114,17 +136,25 @@ export function makeChase(): GameScene {
     dir.normalize()
     const from = camera.position.clone().addScaledVector(dir, 1.6)
     const to = camera.position.clone().addScaledVector(dir, 0.42)
-    chaserVisual.group.rotation.y = Math.atan2(-dir.x, -dir.z) // 카메라를 마주 봄
+    const facing = Math.atan2(-dir.x, -dir.z) // 카메라를 마주 봄
 
-    // 머리 본의 실제 월드 높이를 측정해 얼굴을 정확히 눈높이에 (스케일 가정 금지)
-    chaserVisual.group.position.set(from.x, 0, from.z)
-    chaserVisual.group.updateMatrixWorld(true)
-    const headObj =
-      chaserVisual.group.getObjectByName('head') ?? chaserVisual.group.getObjectByName('Head')
-    const headWorldY = headObj
-      ? headObj.getWorldPosition(new THREE.Vector3()).y
-      : 1.84
-    const groundY = camera.position.y - headWorldY
+    // 히어로 크리처가 로드돼 있으면 스왑, 아니면 추격 본체 얼굴로 폴백
+    let figure: THREE.Group
+    let groundY: number
+    if (scareFigure) {
+      figure = scareFigure
+      figure.visible = true
+      chaserVisual.group.visible = false
+      groundY = camera.position.y - scareFaceY
+    } else {
+      figure = chaserVisual.group
+      figure.position.set(from.x, 0, from.z)
+      figure.updateMatrixWorld(true)
+      const headObj = figure.getObjectByName('head') ?? figure.getObjectByName('Head')
+      const headWorldY = headObj ? headObj.getWorldPosition(new THREE.Vector3()).y : 1.84
+      groundY = camera.position.y - headWorldY
+    }
+    figure.rotation.y = facing
 
     flashlight.intensity = 0 // 손전등이 얼굴을 태우지 않게 — 붉은 섬광만
     // 턱 아래 언더라이팅 — 얼굴에 그림자가 위로 지는 고전 공포 조명
@@ -134,7 +164,7 @@ export function makeChase(): GameScene {
     ctx.fx.set({ rgbShift: 0.85, glitch: 0.35, vignette: 0.7 })
     for (let t = 0; t <= 1; t += 0.2) {
       const p = from.clone().lerp(to, t * t) // 가속하며 돌진
-      chaserVisual.group.position.set(p.x, groundY, p.z)
+      figure.position.set(p.x, groundY, p.z)
       await wait(40)
     }
     // 응시 — 스트로브 + 이펙트 지터로 릴 특유의 "뭉개진 얼굴" 질감
@@ -145,6 +175,10 @@ export function makeChase(): GameScene {
     }
     scareLight.intensity = 0
     flashlight.intensity = 28
+    if (scareFigure) {
+      scareFigure.visible = false
+      chaserVisual.group.visible = true
+    }
     sound.synth?.stop('heartbeat')
     ctx.fx.set({ glitch: 1, rgbShift: 0.9 })
     await wait(400)

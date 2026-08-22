@@ -46,8 +46,9 @@ export function makeEnding(): GameScene {
       await o.showCard(STR.ending.postcredit, 2600)
       ctx.fx.pulse('glitch', 0.9, 500)
 
-      // 7. 크레딧 → 타이틀 복귀
+      // 7. 크레딧 → 타이틀 복귀 (CC-BY 에셋 크레딧 포함)
       await o.showCard(STR.ending.creditsNote, 2200)
+      await o.showSubtitle(STR.ending.creditsAssets, 2400)
       clearCheckpoint()
       location.reload()
     },
