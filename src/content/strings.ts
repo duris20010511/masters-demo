@@ -1,0 +1,47 @@
+export const STR = {
+  title: {
+    name: '석사과정',
+    sub: '손상된 기록',
+    gate: '클릭하여 기록 재생',
+    restoring: (p: number) => `손상된 기록 복원 중… ${p}%`,
+    headphones: '헤드폰 착용을 권장합니다',
+    controls: 'WASD 이동 · 마우스 시점 · E 상호작용 · Tab 출입증 · Esc 일시정지',
+    resume: '기록을 이어서 복원하시겠습니까?',
+  },
+  badge: {
+    affil: '○○대학교 ○○연구실',
+    roleBase: '학부연구생',
+    roleTarget: '석사과정',
+    name: '한○○',
+  },
+  lost: (phase: string) => `해당 구간의 기록은 유실되었습니다 — ${phase}`,
+  colleague: {
+    approach: ['교수님이 너 얘기 하더라.', '요즘 어때? 랩 생활.'],
+    likeYou: '교수님이 너 마음에 들어하시더라.',
+    choiceGood: '재밌어요. 배울 게 많아서.',
+    choiceMeh: '…그냥 그렇죠, 뭐.',
+  },
+  doc: {
+    taskTitle: '졸업생 진로 현황 업데이트',
+    allGrad: '진로: 대학원 진학',
+    selfRow: '한○○ — 대학원 진학 예정',
+    choices: {
+      accurate: '정확히 입력한다',
+      mistake: '사소한 실수를 낸다',
+      deleteRow: '내 이름이 있는 행을 조용히 지운다',
+    },
+    caught: '…방금 뭐 지웠어?',
+  },
+  ending: {
+    q1: '"요즘 연구는 어때?"',
+    q2: '"그런데 왜 우리 연구실에 들어왔어?"',
+    corrupt: '▓▓▓▓▓▓치지직▓▓▓▓▓▓',
+    accept: '"……그래."',
+    exit: '퇴실 처리되었습니다',
+    lostFinal: '이후의 기록은 복원할 수 없습니다.',
+    card: '기록의 끝',
+    postcredit: '한○○ · 진로 확인 필요',
+    creditsNote: '이 데모는 복원된 기록의 일부입니다.',
+  },
+  pause: { title: '일시정지', resume: '계속하기 (클릭)' },
+} as const

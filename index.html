@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>석사과정</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden;
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; }
+    #app { position: fixed; inset: 0; }
+    #ui { position: fixed; inset: 0; pointer-events: none; color: #ddd; }
+    #ui .interactive { pointer-events: auto; }
+    #popout { position: fixed; top: 8px; right: 12px; z-index: 99; font-size: 12px;
+      color: #666; text-decoration: none; pointer-events: auto; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="ui"></div>
+  <a id="popout" href="./" target="_blank" rel="noopener">새 창에서 열기 ↗</a>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
