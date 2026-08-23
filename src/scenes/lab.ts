@@ -77,6 +77,9 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
 
   let grad1Chair: THREE.Group | null = null
   let seatAligned = false
+  const solids: THREE.Object3D[] = [] // 통과 불가 오브젝트 (콜라이더 생성용)
+  const asyncProps: THREE.Group[] = [] // 비동기 로드 소품 — 로드 완료 후 콜라이더 재계산
+  let collidersBuilt = false
 
   // ── 책상 4 + 컴퓨터(실물 모델) + 의자 ──────────────────────
   // 주인공 PC = 회색 풀세트, 나머지 = 검정 모던 세트 (Poly by Google, CC-BY)
@@ -85,7 +88,9 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   scene.add(pc)
   const deskSpots: Array<[number, number]> = [[-2.5, -3], [2.5, -3], [-2.5, 0], [2.5, 0]]
   for (const [x, z] of deskSpots) {
-    scene.add(box(1.6, 0.06, 0.8, M.desk, x, 0.8, z))
+    const top = box(1.6, 0.06, 0.8, M.desk, x, 0.8, z)
+    scene.add(top)
+    solids.push(top) // 책상은 통과 불가
     scene.add(box(0.05, 0.74, 0.7, M.desk, x - 0.75, 0.4, z))
     scene.add(box(0.05, 0.74, 0.7, M.desk, x + 0.75, 0.4, z))
     if (!(x === -2.5 && z === -3)) {
@@ -97,6 +102,8 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
     chair.position.set(x, 0, z + 0.6)
     chair.rotation.y = Math.PI
     scene.add(chair)
+    asyncProps.push(chair)
+    solids.push(chair)
     if (x === 2.5 && z === -3) grad1Chair = chair // 앉은 동료의 의자 — 런타임 정렬 대상
     const pile = makePaperPile()
     pile.position.set(x + 0.5, 0.84, z + 0.15)
@@ -115,6 +122,8 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   grad2.group.position.set(2.8, 0, 3.45) // 냉동고 앞에 서서 뭔가 확인하는 중
   grad2.group.rotation.y = Math.atan2(3.4 - 2.8, 4.2 - 3.45) // 냉동고를 향해
   scene.add(grad2.group)
+  asyncProps.push(grad2.group)
+  solids.push(grad2.group) // 사람도 통과 불가
   const colleague = grad1.group // 상호작용 대상 동료
 
   // ── 생활감 소품 ────────────────────────────────────────────
@@ -122,11 +131,14 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
     const shelf = makeProp('./assets/models/prop-bookcase.glb', 2.0) // 책 꽂힌 책장 (Quaternius CC0)
     shelf.position.set(x, 0, -4.72)
     scene.add(shelf)
+    asyncProps.push(shelf)
+    solids.push(shelf)
   }
   const printer = makePrinter()
   printer.position.set(3.5, 0, 2.6)
   printer.rotation.y = -Math.PI / 2
   scene.add(printer)
+  solids.push(printer)
   for (const z of [-2, 1.6]) {
     const win = makeWindow(1.6, 1.2)
     win.position.set(-3.94, 1.7, z)
@@ -146,6 +158,8 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   freezer.position.set(3.4, 0, 4.2)
   freezer.rotation.y = Math.PI // 문이 방 안쪽을 향하게
   scene.add(freezer)
+  asyncProps.push(freezer)
+  solids.push(freezer)
   scene.add(box(0.4, 0.06, 0.25, M.lamp, 2.85, 1.55, 4.2)) // 리더기 패널 (옆 벽면)
 
   // ── 라이팅: "지나치게 밝은 연구실" — 컨셉의 핵심은 과도한 밝음 (스펙 §10-1)
@@ -259,6 +273,13 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
       // 대학원생들의 머리가 아주 천천히 플레이어를 따라온다 (+숨쉬기·타이핑)
       grad1.update(dt, camera.position)
       grad2.update(dt, camera.position)
+      // 소품 로드가 끝나면 콜라이더를 한 번 구축 (비동기 GLB라 씬 구성 직후엔 빈 그룹)
+      if (!collidersBuilt && asyncProps.every(p => p.children.length > 0)) {
+        const boxes = FPSControls.collidersFrom(solids)
+        controls.setColliders(boxes)
+        collidersBuilt = true
+      }
+
       // 앉은 사람 ↔ 의자 실측 정렬: 사람의 엉덩이를 좌판 위에, 등을 등받이 앞에 둔다.
       // (모델을 눈대중으로 배치하면 반드시 박힌다 — 양쪽 실제 경계를 재서 맞춘다)
       if (!seatAligned && grad1Chair && grad1Chair.children.length > 0) {
@@ -269,13 +290,28 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
         if (hip) {
           const hipPos = (hip as THREE.Object3D).getWorldPosition(new THREE.Vector3())
           if (hipPos.y > 0.15 && hipPos.y < 0.75) {
-            // 의자 실측: 좌판 높이 = 다리 부분을 뺀 아래쪽 덩어리의 윗면 근사
+            // 좌판 표면을 레이캐스트로 실측 — 의자 위에서 아래로 쏴서 실제 앉는 면을 찾는다
             const chairBox = new THREE.Box3().setFromObject(grad1Chair)
-            const seatY = chairBox.min.y + (chairBox.max.y - chairBox.min.y) * 0.47
-            const backZ = chairBox.min.z // 등받이는 -z 쪽 (의자가 Math.PI 회전)
-            grad1.group.position.y += seatY - hipPos.y + 0.02 // 좌판 위에 살짝 얹기
-            grad1.group.position.z += backZ - hipPos.z + 0.16 // 등받이 앞으로 빼기
-            seatAligned = true
+            const c = chairBox.getCenter(new THREE.Vector3())
+            const down = new THREE.Vector3(0, -1, 0)
+            const probe = new THREE.Raycaster()
+            const hits: THREE.Vector3[] = []
+            for (let dx = -0.14; dx <= 0.14; dx += 0.07) {
+              for (let dz = -0.14; dz <= 0.14; dz += 0.07) {
+                probe.set(new THREE.Vector3(c.x + dx, chairBox.max.y + 0.2, c.z + dz), down)
+                const h = probe.intersectObject(grad1Chair, true)[0]
+                // 좌판 높이대(0.3~0.7m)의 히트만 — 등받이·팔걸이·바닥 제외
+                if (h && h.point.y > 0.3 && h.point.y < 0.7) hits.push(h.point)
+              }
+            }
+            if (hits.length > 0) {
+              const seat = hits.reduce((a, p) => a.add(p), new THREE.Vector3()).divideScalar(hits.length)
+              const seatTop = Math.max(...hits.map(p => p.y))
+              grad1.group.position.x += seat.x - hipPos.x
+              grad1.group.position.z += seat.z - hipPos.z
+              grad1.group.position.y += seatTop - hipPos.y + 0.03 // 좌판 위에 얹기
+              seatAligned = true
+            }
           }
         }
       }

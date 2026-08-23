@@ -32,6 +32,30 @@ export class FPSControls {
     this.max = max
   }
 
+  /** 통과 불가 오브젝트들의 AABB (월드 좌표). 씬이 구성된 뒤 한 번 넣어주면 된다. */
+  private colliders: THREE.Box3[] = []
+  private radius = 0.32 // 플레이어 반경 (m)
+
+  setColliders(boxes: THREE.Box3[], radius = 0.32): void {
+    this.colliders = boxes
+    this.radius = radius
+  }
+
+  /** 씬 그래프에서 통과 불가 오브젝트의 AABB를 수집 (지정한 오브젝트들만) */
+  static collidersFrom(objects: THREE.Object3D[]): THREE.Box3[] {
+    return objects
+      .map(o => new THREE.Box3().setFromObject(o))
+      .filter(b => Number.isFinite(b.min.x) && b.max.y > 0.12) // 바닥·빈 그룹 제외
+  }
+
+  private blocked(x: number, z: number): boolean {
+    const r = this.radius
+    for (const b of this.colliders) {
+      if (x > b.min.x - r && x < b.max.x + r && z > b.min.z - r && z < b.max.z + r) return true
+    }
+    return false
+  }
+
   /** 이번 프레임에 이동 중이고 Shift를 누른 상태인가 (추격전 소음 판정용) */
   isRunning = false
 
@@ -49,11 +73,18 @@ export class FPSControls {
     const f = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw))
     const r = new THREE.Vector3(f.z, 0, -f.x)
     const p = this.camera.position
-    if (this.keys.has('KeyW')) p.addScaledVector(f, speed)
-    if (this.keys.has('KeyS')) p.addScaledVector(f, -speed)
-    if (this.keys.has('KeyD')) p.addScaledVector(r, -speed)
-    if (this.keys.has('KeyA')) p.addScaledVector(r, speed)
-    p.clamp(this.min, this.max)
+    // 이동량을 먼저 합산한 뒤, 축별로 충돌 판정 (벽을 따라 미끄러지도록)
+    const d = new THREE.Vector3()
+    if (this.keys.has('KeyW')) d.addScaledVector(f, speed)
+    if (this.keys.has('KeyS')) d.addScaledVector(f, -speed)
+    if (this.keys.has('KeyD')) d.addScaledVector(r, -speed)
+    if (this.keys.has('KeyA')) d.addScaledVector(r, speed)
+
+    const nx = Math.max(this.min.x, Math.min(this.max.x, p.x + d.x))
+    if (!this.blocked(nx, p.z)) p.x = nx
+    const nz = Math.max(this.min.z, Math.min(this.max.z, p.z + d.z))
+    if (!this.blocked(p.x, nz)) p.z = nz
+    p.y = Math.max(this.min.y, Math.min(this.max.y, p.y))
   }
 
   dispose(): void {
