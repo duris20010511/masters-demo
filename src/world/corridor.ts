@@ -1,11 +1,12 @@
 import * as THREE from 'three'
 import { makeDoor, makePlateTexture } from './props'
-import { floorTexture, ceilingTexture, wallTexture, makeGlowSprite, makeExitSign } from './textures'
+import { makeGlowSprite, makeExitSign } from './textures'
+import { surface } from './materials'
 
 const M = {
   // 알베도를 너무 낮추면 어떤 조명으로도 안 보인다 — 어둠은 조명·안개로 만든다
-  wallDark: new THREE.MeshLambertMaterial({ color: 0x6a6a74 }),
-  floorDark: new THREE.MeshLambertMaterial({ color: 0x55555c }),
+  wallDark: surface('wall', { repeatX: 2, repeatY: 1.2, color: 0x9a9aa4 }),
+  floorDark: surface('floor', { repeatX: 2, repeatY: 12, color: 0x8f8f96 }),
   lamp: new THREE.MeshBasicMaterial({ color: 0xffffff }),
   redLamp: new THREE.MeshBasicMaterial({ color: 0xff2a1a }),
 }
@@ -43,15 +44,13 @@ export function buildCorridor(opts: { dark: boolean; segments?: number }): Corri
   const g = new THREE.Group()
   const segs = opts.segments ?? SEGS
   const length = SEG * segs
-  const wall = opts.dark
-    ? M.wallDark
-    : new THREE.MeshLambertMaterial({ map: wallTexture(SEG) })
+  const wall = opts.dark ? M.wallDark : surface('wall', { repeatX: 8, repeatY: 1.2 })
   const floor = opts.dark
     ? M.floorDark
-    : new THREE.MeshLambertMaterial({ map: floorTexture(W + RECESS * 2, length + 4) })
+    : surface('floor', { repeatX: 2, repeatY: (length + 4) / 2, color: 0xb8b8bc })
   const ceil = opts.dark
     ? M.wallDark
-    : new THREE.MeshLambertMaterial({ map: ceilingTexture(W + RECESS * 2, length + 4) })
+    : surface('ceil', { repeatX: 2, repeatY: (length + 4) / 3 })
   const walls: THREE.Mesh[] = []
   const recessZones: RecessZone[] = []
 

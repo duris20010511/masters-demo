@@ -43,3 +43,10 @@
 - Use in this project: laboratory background people and the distorted chaser base.
 
 - `prop-chair.glb` — "Office Chair" by Quaternius — CC0
+
+## PBR 텍스처 (월드)
+
+- `public/assets/textures/*.webp` — ambientCG **CC0**
+  - wall: Concrete012 / floor: Tiles074 / ceil: OfficeCeiling001
+  - 각 Color·NormalGL·Roughness 3종, 1024px WebP로 변환 (원본 JPG 19MB → 1.37MB)
+- 출처: https://ambientcg.com — CC0, 크레딧 불요

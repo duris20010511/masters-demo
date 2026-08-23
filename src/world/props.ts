@@ -1,19 +1,19 @@
 import * as THREE from 'three'
 
 const M = {
-  chair: new THREE.MeshLambertMaterial({ color: 0x3c4048 }),
-  shelf: new THREE.MeshLambertMaterial({ color: 0xb8b0a0 }),
+  chair: new THREE.MeshStandardMaterial({ color: 0x3c4048 }),
+  shelf: new THREE.MeshStandardMaterial({ color: 0xb8b0a0 }),
   book: [
-    new THREE.MeshLambertMaterial({ color: 0x7a6a52 }),
-    new THREE.MeshLambertMaterial({ color: 0x5a6a72 }),
-    new THREE.MeshLambertMaterial({ color: 0x6a5a68 }),
+    new THREE.MeshStandardMaterial({ color: 0x7a6a52 }),
+    new THREE.MeshStandardMaterial({ color: 0x5a6a72 }),
+    new THREE.MeshStandardMaterial({ color: 0x6a5a68 }),
   ],
-  printer: new THREE.MeshLambertMaterial({ color: 0xd8d4c8 }),
-  printerDark: new THREE.MeshLambertMaterial({ color: 0x50504c }),
-  frame: new THREE.MeshLambertMaterial({ color: 0x9a9488 }),
+  printer: new THREE.MeshStandardMaterial({ color: 0xd8d4c8 }),
+  printerDark: new THREE.MeshStandardMaterial({ color: 0x50504c }),
+  frame: new THREE.MeshStandardMaterial({ color: 0x9a9488 }),
   night: new THREE.MeshBasicMaterial({ color: 0x0d1020 }), // 창밖은 항상 밤
-  door: new THREE.MeshLambertMaterial({ color: 0xb6ac98 }),
-  paper: new THREE.MeshLambertMaterial({ color: 0xf0eee6 }),
+  door: new THREE.MeshStandardMaterial({ color: 0xb6ac98 }),
+  paper: new THREE.MeshStandardMaterial({ color: 0xf0eee6 }),
 }
 
 function box(w: number, h: number, d: number, m: THREE.Material, x = 0, y = 0, z = 0): THREE.Mesh {

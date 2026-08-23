@@ -19,7 +19,7 @@ const PERSON_SCALE: Record<'man' | 'sitting' | 'suit' | 'woman', number> = {
   woman: 1.66 / 3.35,
 }
 
-const BODY_M = new THREE.MeshLambertMaterial({ color: 0x4a4a58 })
+const BODY_M = new THREE.MeshStandardMaterial({ color: 0x4a4a58 })
 
 // 주의: 스킨드 메시는 Box3 측정이 엉터리(바인드 전 지오메트리 경계)라 자동 정규화 불가.
 // Quaternius 캐릭터는 원본 ~1.8유닛 — 고정 스케일 사용.

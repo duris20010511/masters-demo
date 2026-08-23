@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { GLITCH_SHADER } from './glitchShader'
 
 export interface FxLevels { vignette: number; grain: number; glitch: number; rgbShift: number }
@@ -22,12 +23,21 @@ export class PostFX {
   private pass: ShaderPass
   private time = 0
   private pulses: Pulse[] = []
+  private bloom: UnrealBloomPass
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
     this.composer = new EffectComposer(renderer)
     this.renderPass = new RenderPass(scene, camera)
     this.pass = new ShaderPass(GLITCH_SHADER as never)
     this.composer.addPass(this.renderPass)
+    // 발광체(형광등·비상등·비상구)만 번지게 — threshold를 낮추면 벽 전체가 뿌예져 공포가 날아간다
+    this.bloom = new UnrealBloomPass(
+      new THREE.Vector2(renderer.domElement.width, renderer.domElement.height),
+      0.55, // strength
+      0.5, // radius
+      0.82, // threshold
+    )
+    this.composer.addPass(this.bloom)
     this.composer.addPass(this.pass)
     // 톤매핑(ACES)·sRGB 변환은 OutputPass가 없으면 컴포저 체인에서 적용되지 않는다
     this.composer.addPass(new OutputPass())
@@ -53,6 +63,7 @@ export class PostFX {
 
   resize(w: number, h: number): void {
     this.composer.setSize(w, h)
+    this.bloom.setSize(w, h)
   }
 
   render(dtMs: number): void {

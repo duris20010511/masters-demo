@@ -11,16 +11,16 @@ import {
   makePrinter, makeWindow, makeWallClock, makeDoor, makePaperPile,
 } from '../world/props'
 import { makeProp } from '../world/models'
-import {
-  floorTexture, ceilingTexture, wallTexture, makeGlowSprite, makePosterMesh,
-} from '../world/textures'
+import { makeGlowSprite, makePosterMesh } from '../world/textures'
+import { surface, solid } from '../world/materials'
 
+// PBR 재질 — 밝은 연구실이라 벽은 밝게 틴트
 const M = {
-  wallZ: new THREE.MeshLambertMaterial({ map: wallTexture(8) }),   // 앞뒤 벽 (8m)
-  wallX: new THREE.MeshLambertMaterial({ map: wallTexture(10) }),  // 옆 벽 (10m)
-  floor: new THREE.MeshLambertMaterial({ map: floorTexture(8, 10) }),
-  ceil: new THREE.MeshLambertMaterial({ map: ceilingTexture(8, 10) }),
-  desk: new THREE.MeshLambertMaterial({ color: 0xc9c4b8 }),
+  wallZ: surface('wall', { repeatX: 4, repeatY: 1.5, color: 0xf0ece2 }),
+  wallX: surface('wall', { repeatX: 5, repeatY: 1.5, color: 0xf0ece2 }),
+  floor: surface('floor', { repeatX: 8, repeatY: 10, color: 0xd8d8d4 }),
+  ceil: surface('ceil', { repeatX: 7, repeatY: 8, color: 0xe8e8e4 }),
+  desk: solid(0xc9c4b8, 0.65),
   lamp: new THREE.MeshBasicMaterial({ color: 0xffffff }), // emissive 형광등
 }
 

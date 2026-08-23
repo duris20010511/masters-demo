@@ -62,6 +62,12 @@ export function makeChase(): GameScene {
   scene.add(exitLight)
   // 물리 광원 단위: 스팟 강도는 수십 단위여야 체감된다
   const flashlight = new THREE.SpotLight(0xb8c9df, 28, 11, 0.5, 0.6, 1.6)
+  // 손전등이 추격자를 비출 때 벽에 실루엣이 드리운다 — 이 장르에서 가장 강한 연출
+  flashlight.castShadow = true
+  flashlight.shadow.mapSize.set(1024, 1024)
+  flashlight.shadow.camera.near = 0.5
+  flashlight.shadow.camera.far = 12
+  flashlight.shadow.bias = -0.0015
   flashlight.position.set(0, 0, 0)
   flashlight.target.position.set(0, 0, -1)
   camera.add(flashlight, flashlight.target)

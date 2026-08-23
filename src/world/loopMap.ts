@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { makeDoor, makePlateTexture } from './props'
 import { makeProp } from './models'
 import { makeGlowSprite, makeExitSign } from './textures'
+import { surface, solid } from './materials'
 
 interface PropSpot {
   url: string
@@ -26,13 +27,14 @@ interface PropSpot {
  *        └────── 남 ──────┘   ← 출구(면담실)
  */
 
+// PBR 재질 (ambientCG CC0) — 손전등이 훑을 때 요철이 살아난다
 const M = {
-  wall: new THREE.MeshLambertMaterial({ color: 0x6a6a74 }),
-  inner: new THREE.MeshLambertMaterial({ color: 0x5c5c66 }),
-  floor: new THREE.MeshLambertMaterial({ color: 0x55555c }),
-  ceil: new THREE.MeshLambertMaterial({ color: 0x3a3a42 }),
+  wall: surface('wall', { repeatX: 2, repeatY: 1.2, color: 0x9a9aa4 }),
+  inner: surface('wall', { repeatX: 3, repeatY: 1.2, color: 0x86868f }),
+  floor: surface('floor', { repeatX: 14, repeatY: 12, color: 0x8f8f96 }),
+  ceil: surface('ceil', { repeatX: 12, repeatY: 10, color: 0x7a7a82 }),
   redLamp: new THREE.MeshBasicMaterial({ color: 0xff2a1a }),
-  desk: new THREE.MeshLambertMaterial({ color: 0x8b8577 }),
+  desk: solid(0x8b8577, 0.7),
 }
 
 // 링 바깥 경계
