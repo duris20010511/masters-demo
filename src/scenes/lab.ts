@@ -259,22 +259,22 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
       // 대학원생들의 머리가 아주 천천히 플레이어를 따라온다 (+숨쉬기·타이핑)
       grad1.update(dt, camera.position)
       grad2.update(dt, camera.position)
-      // 의자를 앉은 자세의 실제 엉덩이 뼈 아래로 자동 정렬 (눈대중 배치 금지)
-      if (!seatAligned && grad1Chair) {
+      // 앉은 사람 ↔ 의자 실측 정렬: 사람의 엉덩이를 좌판 위에, 등을 등받이 앞에 둔다.
+      // (모델을 눈대중으로 배치하면 반드시 박힌다 — 양쪽 실제 경계를 재서 맞춘다)
+      if (!seatAligned && grad1Chair && grad1Chair.children.length > 0) {
         let hip: THREE.Object3D | null = null
         grad1.group.traverse(o => {
           if (!hip && /hip|pelvis/i.test(o.name)) hip = o
         })
         if (hip) {
-          const p = (hip as THREE.Object3D).getWorldPosition(new THREE.Vector3())
-          // 앉은 자세가 완성된 뒤에만 (서있는 크로스페이드 중이면 0.9m대라 스킵)
-          if (p.y > 0.15 && p.y < 0.75) {
-            // 의자 크기는 다른 의자들과 동일 유지 — 위치만 엉덩이 아래로,
-            // 높이는 사람 쪽을 좌판(≈0.5m)에 맞춰 이동
-            grad1Chair.position.x = p.x
-            grad1Chair.position.z = p.z + 0.06
-            grad1Chair.scale.setScalar(1)
-            grad1.group.position.y += 0.5 - p.y
+          const hipPos = (hip as THREE.Object3D).getWorldPosition(new THREE.Vector3())
+          if (hipPos.y > 0.15 && hipPos.y < 0.75) {
+            // 의자 실측: 좌판 높이 = 다리 부분을 뺀 아래쪽 덩어리의 윗면 근사
+            const chairBox = new THREE.Box3().setFromObject(grad1Chair)
+            const seatY = chairBox.min.y + (chairBox.max.y - chairBox.min.y) * 0.47
+            const backZ = chairBox.min.z // 등받이는 -z 쪽 (의자가 Math.PI 회전)
+            grad1.group.position.y += seatY - hipPos.y + 0.02 // 좌판 위에 살짝 얹기
+            grad1.group.position.z += backZ - hipPos.z + 0.16 // 등받이 앞으로 빼기
             seatAligned = true
           }
         }
