@@ -112,10 +112,9 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
 
   // ── 앉아 있는 대학원생 2 (얼굴 없음, 머리만 아주 천천히 따라옴) ──
   // 남성 동료: 책상 의자에 앉아 일하는 중 (sit_idle) / 여성 동료: 서 있음
-  const grad1 = makePerson({ variant: 'man' })
-  grad1.play(['new_sit_idle'])
+  const grad1 = makePerson({ variant: 'sitting' }) // 앉은 자세 전용 모델 (애니가 곧 착석 포즈)
   // 좌판 정렬 실측 보정: 엉덩이가 등받이에 붙도록
-  grad1.group.position.set(2.5, 0, -2.58)
+  grad1.group.position.set(2.5, 0, -2.45) // 책상 앞 (의자는 update에서 이 사람 밑으로 들어감)
   grad1.group.rotation.y = Math.PI // 모니터를 향해 앉음 (플레이어에겐 등)
   scene.add(grad1.group)
   const grad2 = makePerson({ variant: 'woman' })
@@ -280,8 +279,8 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
         collidersBuilt = true
       }
 
-      // 앉은 사람 ↔ 의자 실측 정렬: 사람의 엉덩이를 좌판 위에, 등을 등받이 앞에 둔다.
-      // (모델을 눈대중으로 배치하면 반드시 박힌다 — 양쪽 실제 경계를 재서 맞춘다)
+      // 착석 정렬 — **사람을 옮기지 않고 의자를 사람 밑으로 넣는다.**
+      // (앉은 포즈는 발이 바닥에 닿게 저작돼 있으므로 사람이 기준이고 의자가 따라가야 박히지 않는다)
       if (!seatAligned && grad1Chair && grad1Chair.children.length > 0) {
         let hip: THREE.Object3D | null = null
         grad1.group.traverse(o => {
@@ -289,27 +288,25 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
         })
         if (hip) {
           const hipPos = (hip as THREE.Object3D).getWorldPosition(new THREE.Vector3())
-          if (hipPos.y > 0.15 && hipPos.y < 0.75) {
-            // 좌판 표면을 레이캐스트로 실측 — 의자 위에서 아래로 쏴서 실제 앉는 면을 찾는다
+          if (hipPos.y > 0.2 && hipPos.y < 0.8) {
+            // 의자의 현재 좌판 표면 높이를 레이캐스트로 실측
             const chairBox = new THREE.Box3().setFromObject(grad1Chair)
             const c = chairBox.getCenter(new THREE.Vector3())
             const down = new THREE.Vector3(0, -1, 0)
             const probe = new THREE.Raycaster()
-            const hits: THREE.Vector3[] = []
-            for (let dx = -0.14; dx <= 0.14; dx += 0.07) {
-              for (let dz = -0.14; dz <= 0.14; dz += 0.07) {
-                probe.set(new THREE.Vector3(c.x + dx, chairBox.max.y + 0.2, c.z + dz), down)
+            let seatTop = -Infinity
+            for (let dx = -0.12; dx <= 0.12; dx += 0.06) {
+              for (let dz = -0.12; dz <= 0.12; dz += 0.06) {
+                probe.set(new THREE.Vector3(c.x + dx, chairBox.max.y + 0.3, c.z + dz), down)
                 const h = probe.intersectObject(grad1Chair, true)[0]
-                // 좌판 높이대(0.3~0.7m)의 히트만 — 등받이·팔걸이·바닥 제외
-                if (h && h.point.y > 0.3 && h.point.y < 0.7) hits.push(h.point)
+                if (h && h.point.y > 0.25 && h.point.y < 0.75) seatTop = Math.max(seatTop, h.point.y)
               }
             }
-            if (hits.length > 0) {
-              const seat = hits.reduce((a, p) => a.add(p), new THREE.Vector3()).divideScalar(hits.length)
-              const seatTop = Math.max(...hits.map(p => p.y))
-              grad1.group.position.x += seat.x - hipPos.x
-              grad1.group.position.z += seat.z - hipPos.z
-              grad1.group.position.y += seatTop - hipPos.y + 0.03 // 좌판 위에 얹기
+            if (Number.isFinite(seatTop)) {
+              // 좌판을 엉덩이 바로 아래로, 의자 중심을 엉덩이 약간 뒤로 (등받이가 등을 뚫지 않게)
+              grad1Chair.position.y += hipPos.y - seatTop - 0.06
+              grad1Chair.position.x += hipPos.x - c.x
+              grad1Chair.position.z += hipPos.z - c.z + 0.1
               seatAligned = true
             }
           }

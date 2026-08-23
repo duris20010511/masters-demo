@@ -4,15 +4,17 @@ import { loadModel, instantiate, playClip } from './models'
 // Sketchfab CC-BY 인물 3종 (ATTRIBUTION.md 참조) + 크리처
 const MODEL_URL = {
   man: './assets/models/colleague-man.glb', // 캐주얼 재킷 남성 (manoeldarochadeoliveira)
+  sitting: './assets/models/colleague-sitting.glb', // 앉은 자세 전용 (Ace-of_spades)
   suit: './assets/models/professor.glb', // 정장 남성 — 교수용 (같은 작가)
   woman: './assets/models/colleague-woman.glb', // 안경+니트 여성 (yuriannoue)
   monster: './assets/models/crawler.glb', // 기어오는 변이 인간 (CC-BY-4.0, Elisey) — crawl 애니 내장
 }
 
 // 스킨드 메시는 지오메트리 경계가 무의미 — **관절(joint) 바인드 위치** 실측 기반 고정 스케일
-// (man 1.73m / woman 3.35m / suit 1.70m 원본)
-const PERSON_SCALE: Record<'man' | 'suit' | 'woman', number> = {
+// (man 1.73m / woman 3.35m / suit 1.70m / sitting 3.57m 원본)
+const PERSON_SCALE: Record<'man' | 'sitting' | 'suit' | 'woman', number> = {
   man: 1.0,
+  sitting: 1.74 / 3.57,
   suit: 1.035,
   woman: 1.66 / 3.35,
 }
@@ -43,7 +45,7 @@ export interface Person {
 }
 
 export function makePerson(
-  opts: { seated?: boolean; variant?: 'man' | 'suit' | 'woman' } = {},
+  opts: { seated?: boolean; variant?: 'man' | 'sitting' | 'suit' | 'woman' } = {},
 ): Person {
   const g = new THREE.Group()
   const fallback = primitiveFallback(!!opts.seated)

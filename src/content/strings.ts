@@ -61,7 +61,7 @@ export const STR = {
     postcredit: '한○○ · 진로 확인 필요',
     creditsNote: '이 데모는 복원된 기록의 일부입니다.',
     creditsAssets:
-      '3D (CC-BY): Crawling Mutated Human © Elisey · Gaunt Horror Creature © PurplePoint · 인물 © manoeldarochadeoliveira, yuriannoue · 소품 © Poly by Google · CC0: Quaternius, MilkAndBanana',
+      '3D (CC-BY): Crawling Mutated Human © Elisey · Gaunt Horror Creature © PurplePoint · 인물 © manoeldarochadeoliveira, yuriannoue, Ace-of_spades · 소품 © Poly by Google · CC0: Quaternius, MilkAndBanana',
   },
   pause: { title: '일시정지', resume: '계속하기 (클릭)' },
 } as const
