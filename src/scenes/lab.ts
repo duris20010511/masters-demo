@@ -269,9 +269,12 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
           const p = (hip as THREE.Object3D).getWorldPosition(new THREE.Vector3())
           // 앉은 자세가 완성된 뒤에만 (서있는 크로스페이드 중이면 0.9m대라 스킵)
           if (p.y > 0.15 && p.y < 0.75) {
+            // 의자 크기는 다른 의자들과 동일 유지 — 위치만 엉덩이 아래로,
+            // 높이는 사람 쪽을 좌판(≈0.5m)에 맞춰 이동
             grad1Chair.position.x = p.x
             grad1Chair.position.z = p.z + 0.06
-            grad1Chair.scale.setScalar(Math.min(1.4, Math.max(0.8, (p.y - 0.03) / 0.475)))
+            grad1Chair.scale.setScalar(1)
+            grad1.group.position.y += 0.5 - p.y
             seatAligned = true
           }
         }
