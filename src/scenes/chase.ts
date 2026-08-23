@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { GameScene, SceneCtx } from './sceneManager'
 import { FPSControls } from '../input/controls'
-import { buildCorridor, CORRIDOR } from '../world/corridor'
+import { buildLoopMap } from '../world/loopMap'
 import { makeGlowSprite } from '../world/textures'
 import { STR } from '../content/strings'
 import { makeChaser } from '../world/person'
@@ -17,11 +17,10 @@ export function makeChase(): GameScene {
   scene.background = new THREE.Color(0x050505)
   scene.fog = new THREE.Fog(0x070707, 4, 30)
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 40)
-  const SPAWN = new THREE.Vector3(0, 1.6, 1.2)
-  camera.position.copy(SPAWN)
-
-  const rig = buildCorridor({ dark: true, segments: 14 }) // 긴 복도 — 수집하며 왕복
+  const rig = buildLoopMap() // ㅁ자 순환 복도 + 방 3개
   scene.add(rig.group)
+  const SPAWN = rig.spawn.clone()
+  camera.position.copy(SPAWN)
 
   // ── 연구 자료 픽업 3종 (알코브 안에 숨겨 배치 — 들어가려면 위험을 감수) ──
   const PAPER = new THREE.MeshStandardMaterial({
@@ -32,10 +31,8 @@ export function makeChase(): GameScene {
   })
   interface Pickup { group: THREE.Group; taken: boolean }
   const pickups: Pickup[] = []
-  // 알코브 중심 z = -SEG*i (corridor.ts와 동일 공식) — 복도 전체를 훑도록 i를 흩뿌린다
-  for (const [idx, i] of [4, 8, 12].entries()) {
-    const z = -CORRIDOR.SEG * i
-    const side = idx % 2 === 0 ? 1 : -1
+  // 방 3곳에 하나씩 — 세 방을 전부 뒤져야 나갈 수 있다
+  for (const room of rig.rooms) {
     const g2 = new THREE.Group()
     const folder = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.04, 0.22), PAPER)
     folder.rotation.z = 0.06
@@ -46,7 +43,7 @@ export function makeChase(): GameScene {
     const glow = makeGlowSprite(1.1, 1.1, 0xfff0c0)
     glow.position.y = 0.1
     g2.add(glow)
-    g2.position.set(side * (CORRIDOR.W / 2 + CORRIDOR.RECESS - 0.22), 0.1, z)
+    g2.position.copy(room.spot)
     scene.add(g2)
     pickups.push({ group: g2, taken: false })
   }
@@ -54,14 +51,14 @@ export function makeChase(): GameScene {
   // 어둠 속 최소 가시성: 차가운 저조도 + 붉은 비상등 풀 2개 + 비상구 초록 (포인트 3개 상한 준수)
   scene.add(new THREE.AmbientLight(0x39404f, 0.5))
   scene.add(new THREE.HemisphereLight(0x50586f, 0x0a0a0c, 0.45))
-  const red1 = new THREE.PointLight(0xd21d16, 12, 11)
-  red1.position.set(-0.8, 2.3, -4)
+  const red1 = new THREE.PointLight(0xd21d16, 14, 13)
+  red1.position.set(-9.6, 2.3, -8)
   scene.add(red1)
-  const red2 = new THREE.PointLight(0xd21d16, 12, 11)
-  red2.position.set(-0.8, 2.3, -20)
+  const red2 = new THREE.PointLight(0xd21d16, 14, 13)
+  red2.position.set(9.6, 2.3, -8)
   scene.add(red2)
-  const exitLight = new THREE.PointLight(0x22cc66, 5, 8)
-  exitLight.position.set(0, 2.3, rig.endDoorZ + 0.5)
+  const exitLight = new THREE.PointLight(0x22cc66, 6, 9)
+  exitLight.position.copy(rig.exit).setY(2.3)
   scene.add(exitLight)
   // 물리 광원 단위: 스팟 강도는 수십 단위여야 체감된다
   const flashlight = new THREE.SpotLight(0xb8c9df, 28, 11, 0.5, 0.6, 1.6)
@@ -101,11 +98,8 @@ export function makeChase(): GameScene {
   const controls = new FPSControls(camera)
   // 경계는 복도 전체(알코브 포함)로 넓게, 실제 차단은 벽 콜라이더가 담당한다.
   // (좌표 클램프 방식은 알코브에서 대각선 이동에 뚫린다 — 연구실과 같은 AABB 방식으로 통일)
-  controls.setBounds(
-    new THREE.Vector3(-(CORRIDOR.W / 2 + CORRIDOR.RECESS), 1.6, rig.endDoorZ + 0.5),
-    new THREE.Vector3(CORRIDOR.W / 2 + CORRIDOR.RECESS, 1.6, 2.0),
-  )
-  // 반경 0.22 — 알코브(문틈) 입구 폭이 1m라 숨으러 들어갈 여유를 남긴다
+  controls.setBounds(rig.bounds.min, rig.bounds.max)
+  // 반경 0.22 — 문 폭 2m라 통행에 여유가 있다
   controls.setColliders(FPSControls.collidersFrom(rig.wallMeshes), 0.22)
 
   const ray = new THREE.Raycaster()
@@ -119,9 +113,8 @@ export function makeChase(): GameScene {
     const sense = Math.max(0.4, 0.8 ** Math.max(0, fails - 1))
     const spd = Math.max(0.7, 0.9 ** Math.max(0, fails - 3))
     return new ChaserAI({
-      // 리셋 시 첫 웨이포인트에서 시작 — 반드시 스폰 반대편(먼 쪽)이 먼저.
-      // 순찰 상한 -10: 시야가 스폰(z≈1.2)까지 닿지 않게 (가만히 있으면 안전)
-      waypoints: [{ x: 0, z: -48 }, { x: 0, z: -10 }],
+      // 링을 도는 4코너 순찰 — 어느 쪽에서 올지 모른다
+      waypoints: rig.patrol,
       hearRadius: 8 * sense,
       sightRadius: 6 * sense,
       sightAngleDeg: 70,
@@ -210,7 +203,7 @@ export function makeChase(): GameScene {
     // 리셋 — 크리처를 즉시 순찰 시작점으로 치운다 (잡힌 자리에 시체처럼 남지 않게)
     camera.position.copy(SPAWN)
     ai = makeAI(ctx.state.chaseFails)
-    chaserVisual.apply({ x: 0, z: -48 }, Math.PI, 16, 'walk')
+    chaserVisual.apply(rig.patrol[0], Math.PI, 16, 'walk')
     sound.synth?.start('heartbeat', 0.22)
     await ctx.overlay.showClickToContinue()
     ctx.modes.toFPS(true)
@@ -229,7 +222,10 @@ export function makeChase(): GameScene {
       sound.synth?.play('beep_ok', 0.35)
       ctx.fx.pulse('glitch', 0.25, 260)
       ctx.overlay.setHud(STR.chase.hud(collected, pickups.length))
-      void ctx.overlay.showSubtitle(`${STR.chase.pickup[i]} — "${STR.chase.note[i]}"`, 2600)
+      void ctx.overlay.showSubtitle(
+        `${rig.rooms[i].name} · ${STR.chase.pickup[i]} — "${STR.chase.note[i]}"`,
+        2800,
+      )
       if (collected === pickups.length) {
         void ctx.overlay.showSubtitle(STR.chase.complete, 2400)
         addJournal(ctx.state, 'cycle2_bad') // "나갈 이유를 먼저 만들어라"
@@ -310,7 +306,7 @@ export function makeChase(): GameScene {
         void onCaught()
         return
       }
-      if (camera.position.z < rig.endDoorZ + 1.3) void onReach()
+      if (camera.position.distanceTo(rig.exit) < 1.6) void onReach()
     },
   }
 }
