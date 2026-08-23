@@ -99,10 +99,11 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   }
 
   // ── 앉아 있는 대학원생 2 (얼굴 없음, 머리만 아주 천천히 따라옴) ──
-  // 책상 옆에 서서 모니터를 내려다보는 대학원생들 (등을 보이고 서 있음)
+  // 남성 동료: 책상 의자에 앉아 일하는 중 (sit_idle) / 여성 동료: 서 있음
   const grad1 = makePerson({ variant: 'man' })
-  grad1.group.position.set(1.75, 0, -2.6)
-  grad1.group.rotation.y = Math.PI + 0.5
+  grad1.play(['new_sit_idle'])
+  grad1.group.position.set(2.5, 0, -2.35) // 책상(2.5,-3) 의자 위
+  grad1.group.rotation.y = Math.PI // 모니터를 향해 앉음 (플레이어에겐 등)
   scene.add(grad1.group)
   const grad2 = makePerson({ variant: 'woman' })
   grad2.group.position.set(-1.8, 0, 0.75)
