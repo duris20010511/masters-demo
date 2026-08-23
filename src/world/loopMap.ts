@@ -1,6 +1,17 @@
 import * as THREE from 'three'
 import { makeDoor, makePlateTexture } from './props'
+import { makeProp } from './models'
 import { makeGlowSprite, makeExitSign } from './textures'
+
+interface PropSpot {
+  url: string
+  h: number // 목표 높이(m)
+  x: number
+  z: number
+  y?: number // 책상 위 등 (기본 바닥)
+  ry?: number
+  solid?: boolean // 통과 불가 여부
+}
 
 /**
  * ㅁ자 순환 맵 — 가운데가 막힌 사각 링 복도 + 바깥으로 붙은 방 3개.
@@ -48,6 +59,8 @@ export interface RoomSpec {
 export interface LoopMapRig {
   group: THREE.Group
   wallMeshes: THREE.Mesh[]
+  /** 비동기 로드되는 통과 불가 소품 — 로드 완료 후 콜라이더에 합류 */
+  solidProps: THREE.Group[]
   spawn: THREE.Vector3
   /** 면담실 문 앞 지점 */
   exit: THREE.Vector3
@@ -60,6 +73,7 @@ export interface LoopMapRig {
 export function buildLoopMap(): LoopMapRig {
   const g = new THREE.Group()
   const walls: THREE.Mesh[] = []
+  const solidProps: THREE.Group[] = [] // 비동기 GLB 소품 (로드 후 콜라이더 재계산 대상)
 
   const wall = (w: number, d: number, x: number, z: number, mat = M.wall): void => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), mat)
@@ -211,7 +225,7 @@ export function buildLoopMap(): LoopMapRig {
   }
   for (const r of rooms) lamp(r.center.x, r.center.z)
 
-  // ── 방 안 소품 (책상 몇 개로 '방'처럼 보이게) ─────────────
+  // ── 방 안 소품 ────────────────────────────────────────────
   const deskAt = (x: number, z: number, ry = 0): void => {
     const d = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.8), M.desk)
     d.position.set(x, 0.78, z)
@@ -232,9 +246,33 @@ export function buildLoopMap(): LoopMapRig {
   deskAt(3.2, 5.4, Math.PI / 2)
   deskAt(7, 3.2)
 
+  // GLB 소품을 방에 얹는다 (로드는 비동기 — 콜라이더는 chase 씬이 나중에 재계산)
+  const propSpots: PropSpot[] = [
+    // 자료실 (서) — 문서 보관
+    { url: 'prop-bookcase.glb', h: 2.0, x: -17.4, z: -6.4, ry: Math.PI / 2, solid: true },
+    { url: 'prop-bookcase.glb', h: 2.0, x: -17.4, z: -9.6, ry: Math.PI / 2, solid: true },
+    { url: 'prop-computer2.glb', h: 0.48, x: -15.5, z: -6.2, y: 0.81, ry: Math.PI },
+    // 실험실 (동) — 장비
+    { url: 'prop-fridge.glb', h: 1.9, x: 17.2, z: -5.2, ry: -Math.PI / 2, solid: true },
+    { url: 'prop-computer.glb', h: 0.52, x: 15.5, z: -9.6, y: 0.81, ry: Math.PI },
+    { url: 'prop-chair.glb', h: 1.0, x: 15.5, z: -8.6, ry: 0, solid: true },
+    // 교수 연구실 (북)
+    { url: 'prop-bookcase.glb', h: 2.0, x: 2.2, z: 7.5, ry: Math.PI, solid: true },
+    { url: 'prop-computer.glb', h: 0.52, x: 7, z: 3.2, y: 0.81, ry: 0 },
+    { url: 'prop-chair.glb', h: 1.0, x: 7, z: 4.2, ry: Math.PI, solid: true },
+  ]
+  for (const s of propSpots) {
+    const p = makeProp(`./assets/models/${s.url}`, s.h)
+    p.position.set(s.x, s.y ?? 0, s.z)
+    p.rotation.y = s.ry ?? 0
+    g.add(p)
+    if (s.solid) solidProps.push(p)
+  }
+
   return {
     group: g,
     wallMeshes: walls,
+    solidProps,
     // 스폰: 북서 코너 (출구는 정반대편 남쪽 — 한 바퀴 돌아야 한다)
     spawn: new THREE.Vector3(OUT.xMin + CORRIDOR_W / 2, 1.6, OUT.zMax - CORRIDOR_W / 2),
     exit: new THREE.Vector3(0, 1.6, OUT.zMin + 0.9),

@@ -101,6 +101,8 @@ export function makeChase(): GameScene {
   controls.setBounds(rig.bounds.min, rig.bounds.max)
   // 반경 0.22 — 문 폭 2m라 통행에 여유가 있다
   controls.setColliders(FPSControls.collidersFrom(rig.wallMeshes), 0.22)
+  // 방 소품(GLB)은 비동기 로드 — 다 들어오면 콜라이더를 한 번 재계산
+  let propColliders = false
 
   const ray = new THREE.Raycaster()
   const steps = new FootstepTracker()
@@ -279,6 +281,13 @@ export function makeChase(): GameScene {
     update(dt) {
       controls.update(dt)
       if (!ctx || busy || !ai) return
+      if (!propColliders && rig.solidProps.every(p => p.children.length > 0)) {
+        propColliders = true
+        controls.setColliders(
+          FPSControls.collidersFrom([...rig.wallMeshes, ...rig.solidProps]),
+          0.22,
+        )
+      }
       if (ctx.modes.mode !== 'fps') return
       steps.update(camera.position)
       checkPickups()
