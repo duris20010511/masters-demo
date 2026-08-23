@@ -39,9 +39,10 @@ const RECESS = 0.45 // 알코브 깊이
 
 export const CORRIDOR = { SEG, SEGS, W, DOOR_W, RECESS }
 
-export function buildCorridor(opts: { dark: boolean }): CorridorRig {
+export function buildCorridor(opts: { dark: boolean; segments?: number }): CorridorRig {
   const g = new THREE.Group()
-  const length = SEG * SEGS
+  const segs = opts.segments ?? SEGS
+  const length = SEG * segs
   const wall = opts.dark
     ? M.wallDark
     : new THREE.MeshLambertMaterial({ map: wallTexture(SEG) })
@@ -67,7 +68,7 @@ export function buildCorridor(opts: { dark: boolean }): CorridorRig {
   mkWall(W + RECESS * 2, 3, 0.1, 0, 1.5, 2.4)
 
   const plateMats: THREE.MeshBasicMaterial[] = []
-  for (let i = 0; i < SEGS; i++) {
+  for (let i = 0; i < segs; i++) {
     const zs = -SEG * i + 2 // 세그먼트 시작 (시작벽 z=2.4에 맞춤)
     const zc = zs - 2 // 문 중심
     // 조명

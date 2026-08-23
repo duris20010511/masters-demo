@@ -2,6 +2,8 @@ import * as THREE from 'three'
 import type { GameScene, SceneCtx } from './sceneManager'
 import { FPSControls } from '../input/controls'
 import { buildCorridor, CORRIDOR } from '../world/corridor'
+import { makeGlowSprite } from '../world/textures'
+import { STR } from '../content/strings'
 import { makeChaser } from '../world/person'
 import { loadModel } from '../world/models'
 import { ChaserAI } from '../chase/chaserAI'
@@ -18,8 +20,37 @@ export function makeChase(): GameScene {
   const SPAWN = new THREE.Vector3(0, 1.6, 1.2)
   camera.position.copy(SPAWN)
 
-  const rig = buildCorridor({ dark: true })
+  const rig = buildCorridor({ dark: true, segments: 14 }) // 긴 복도 — 수집하며 왕복
   scene.add(rig.group)
+
+  // ── 연구 자료 픽업 3종 (알코브 안에 숨겨 배치 — 들어가려면 위험을 감수) ──
+  const PAPER = new THREE.MeshStandardMaterial({
+    color: 0xe8e2d0,
+    emissive: 0x6a6455, // 어둠 속에서 배어나오게
+    emissiveIntensity: 1,
+    roughness: 0.9,
+  })
+  interface Pickup { group: THREE.Group; taken: boolean }
+  const pickups: Pickup[] = []
+  // 알코브 중심 z = -SEG*i (corridor.ts와 동일 공식) — 복도 전체를 훑도록 i를 흩뿌린다
+  for (const [idx, i] of [4, 8, 12].entries()) {
+    const z = -CORRIDOR.SEG * i
+    const side = idx % 2 === 0 ? 1 : -1
+    const g2 = new THREE.Group()
+    const folder = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.04, 0.22), PAPER)
+    folder.rotation.z = 0.06
+    const sheet = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.01, 0.19), PAPER)
+    sheet.position.set(0.03, 0.03, 0.02)
+    sheet.rotation.y = 0.2
+    g2.add(folder, sheet)
+    const glow = makeGlowSprite(1.1, 1.1, 0xfff0c0)
+    glow.position.y = 0.1
+    g2.add(glow)
+    g2.position.set(side * (CORRIDOR.W / 2 + CORRIDOR.RECESS - 0.22), 0.1, z)
+    scene.add(g2)
+    pickups.push({ group: g2, taken: false })
+  }
+  let collected = 0
   // 어둠 속 최소 가시성: 차가운 저조도 + 붉은 비상등 풀 2개 + 비상구 초록 (포인트 3개 상한 준수)
   scene.add(new THREE.AmbientLight(0x39404f, 0.5))
   scene.add(new THREE.HemisphereLight(0x50586f, 0x0a0a0c, 0.45))
@@ -88,9 +119,9 @@ export function makeChase(): GameScene {
     const sense = Math.max(0.4, 0.8 ** Math.max(0, fails - 1))
     const spd = Math.max(0.7, 0.9 ** Math.max(0, fails - 3))
     return new ChaserAI({
-      // 리셋 시 첫 웨이포인트에서 시작 — 반드시 스폰 반대편(-25)이 먼저.
-      // 순찰 상한 -10: 시야 6m가 스폰(z≈1.2)까지 닿지 않게 (가만히 있으면 안전)
-      waypoints: [{ x: 0, z: -25 }, { x: 0, z: -10 }],
+      // 리셋 시 첫 웨이포인트에서 시작 — 반드시 스폰 반대편(먼 쪽)이 먼저.
+      // 순찰 상한 -10: 시야가 스폰(z≈1.2)까지 닿지 않게 (가만히 있으면 안전)
+      waypoints: [{ x: 0, z: -48 }, { x: 0, z: -10 }],
       hearRadius: 8 * sense,
       sightRadius: 6 * sense,
       sightAngleDeg: 70,
@@ -179,16 +210,47 @@ export function makeChase(): GameScene {
     // 리셋 — 크리처를 즉시 순찰 시작점으로 치운다 (잡힌 자리에 시체처럼 남지 않게)
     camera.position.copy(SPAWN)
     ai = makeAI(ctx.state.chaseFails)
-    chaserVisual.apply({ x: 0, z: -25 }, Math.PI, 16, 'walk')
+    chaserVisual.apply({ x: 0, z: -48 }, Math.PI, 16, 'walk')
     sound.synth?.start('heartbeat', 0.22)
     await ctx.overlay.showClickToContinue()
     ctx.modes.toFPS(true)
     busy = false
   }
 
+  /** 자료 회수 — 근접하면 자동 수집 (쫓기는 중이라 조작을 요구하지 않는다) */
+  function checkPickups(): void {
+    for (const [i, p] of pickups.entries()) {
+      if (p.taken) continue
+      const d = Math.hypot(p.group.position.x - camera.position.x, p.group.position.z - camera.position.z)
+      if (d > 1.0) continue
+      p.taken = true
+      p.group.visible = false
+      collected++
+      sound.synth?.play('beep_ok', 0.35)
+      ctx.fx.pulse('glitch', 0.25, 260)
+      ctx.overlay.setHud(STR.chase.hud(collected, pickups.length))
+      void ctx.overlay.showSubtitle(`${STR.chase.pickup[i]} — "${STR.chase.note[i]}"`, 2600)
+      if (collected === pickups.length) {
+        void ctx.overlay.showSubtitle(STR.chase.complete, 2400)
+        addJournal(ctx.state, 'cycle2_bad') // "나갈 이유를 먼저 만들어라"
+      }
+    }
+  }
+
+  let lockedNotice = 0
   async function onReach(): Promise<void> {
+    // 자료가 모자라면 문이 열리지 않는다 (되돌아가서 마저 챙겨야 함)
+    if (collected < pickups.length) {
+      if (performance.now() - lockedNotice > 3000) {
+        lockedNotice = performance.now()
+        sound.synth?.play('beep_error', 0.4)
+        void ctx.overlay.showSubtitle(STR.chase.locked, 2200)
+      }
+      return
+    }
     busy = true
     ctx.modes.toUI()
+    ctx.overlay.setHud('')
     sound.synth?.stop('heartbeat')
     addJournal(ctx.state, 'chase_done')
     void ctx.overlay.showSubtitle('면담실이다.', 1500)
@@ -204,16 +266,18 @@ export function makeChase(): GameScene {
       ctx.modes.onChange(m => { controls.enabled = m === 'fps' })
       ctx.fx.set({ grain: 0.14, vignette: 0.42 })
       ai = makeAI(ctx.state.chaseFails)
-      await ctx.overlay.showCard('복도가 어둡다.', 1400)
-      void ctx.overlay.showSubtitle('면담실은 복도 끝이다. 무언가가 돌아다닌다.', 3000)
+      await ctx.overlay.showCard(STR.chase.brief, 1400)
+      void ctx.overlay.showSubtitle(STR.chase.order, 3200)
       await ctx.overlay.showClickToContinue()
       sound.synth?.start('heartbeat', 0.22)
+      ctx.overlay.setHud(STR.chase.hud(0, pickups.length))
       ctx.modes.toFPS(true)
-      void ctx.overlay.showSubtitle('걸으면 조용하다 · Shift 달리기는 소리가 난다 · 문틈에 숨어라', 3400)
+      void ctx.overlay.showSubtitle(STR.chase.tip, 3400)
     },
     exit() {
       controls.dispose()
       ctx?.overlay.setCrosshair('off')
+      ctx?.overlay.setHud('')
       sound.synth?.stop('heartbeat')
     },
     update(dt) {
@@ -221,6 +285,7 @@ export function makeChase(): GameScene {
       if (!ctx || busy || !ai) return
       if (ctx.modes.mode !== 'fps') return
       steps.update(camera.position)
+      checkPickups()
 
       const out = ai.update({
         dtMs: dt,

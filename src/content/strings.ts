@@ -63,5 +63,20 @@ export const STR = {
     creditsAssets:
       '3D (CC-BY): Crawling Mutated Human © Elisey · Gaunt Horror Creature © PurplePoint · 인물 © manoeldarochadeoliveira, yuriannoue, Ace-of_spades · 소품 © Poly by Google · CC0: Quaternius, MilkAndBanana',
   },
+  chase: {
+    brief: '복도가 어둡다.',
+    order: '교수: "면담실로 오게. 오는 길에 자료도 챙겨오고."',
+    hud: (n: number, total: number) => `자료 ${n} / ${total}`,
+    tip: '걸으면 조용하다 · Shift 달리기는 소리가 난다 · 문틈에 숨어라',
+    pickup: ['연구 기록 A-3 회수', '실험 일지 B-7 회수', '인건비 정산서 C-1 회수'],
+    locked: '자료가 모자란다. 아직 나갈 수 없다.',
+    complete: '자료를 다 챙겼다. 면담실로.',
+    // 자료에 적힌 것 — 주울 때마다 한 줄씩 (선배 서사)
+    note: [
+      '…실험 참가자 명단에 내 이름이 있다.',
+      '11월 7일. 잠을 자도 아침이 오지 않는다.',
+      '존재하지 않는 학생의 인건비가 정산되어 있다.',
+    ],
+  },
   pause: { title: '일시정지', resume: '계속하기 (클릭)' },
 } as const

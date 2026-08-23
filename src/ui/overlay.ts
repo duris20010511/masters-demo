@@ -85,6 +85,25 @@ export class Overlay {
     return new Promise(res => d.addEventListener('click', () => { d.remove(); res() }))
   }
 
+  private hudEl: HTMLDivElement | null = null
+
+  /** 화면 좌상단 상시 표시 (수집 현황 등). 빈 문자열이면 숨김 */
+  setHud(text: string): void {
+    if (!text) {
+      this.hudEl?.remove()
+      this.hudEl = null
+      return
+    }
+    if (!this.hudEl) {
+      this.hudEl = document.createElement('div')
+      this.hudEl.style.cssText =
+        'position:absolute;left:24px;top:20px;font-size:15px;letter-spacing:0.08em;' +
+        'color:#d8d2c4;text-shadow:0 0 8px #000,0 0 20px #000'
+      this.root.appendChild(this.hudEl)
+    }
+    this.hudEl.textContent = text
+  }
+
   private crosshairEl: HTMLDivElement | null = null
 
   setCrosshair(state: 'off' | 'idle' | 'target'): void {
