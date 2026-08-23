@@ -8,11 +8,11 @@ import { STR } from '../content/strings'
 import { makePerson } from '../world/person'
 import { sound, FootstepTracker } from '../audio/sound'
 import {
-  makeChair, makeShelf, makePrinter, makeWindow, makeWallClock, makeDoor, makePaperPile,
+  makeChair, makePrinter, makeWindow, makeWallClock, makeDoor, makePaperPile,
 } from '../world/props'
+import { makeProp } from '../world/models'
 import {
-  floorTexture, ceilingTexture, wallTexture, screenSheetTexture, screenCodeTexture,
-  makeGlowSprite, makePosterMesh,
+  floorTexture, ceilingTexture, wallTexture, makeGlowSprite, makePosterMesh,
 } from '../world/textures'
 
 const M = {
@@ -21,10 +21,6 @@ const M = {
   floor: new THREE.MeshLambertMaterial({ map: floorTexture(8, 10) }),
   ceil: new THREE.MeshLambertMaterial({ map: ceilingTexture(8, 10) }),
   desk: new THREE.MeshLambertMaterial({ color: 0xc9c4b8 }),
-  dark: new THREE.MeshLambertMaterial({ color: 0x333333 }),
-  screen: new THREE.MeshBasicMaterial({ map: screenSheetTexture() }),
-  screenDim: new THREE.MeshBasicMaterial({ map: screenCodeTexture() }),
-  screenOff: new THREE.MeshBasicMaterial({ color: 0x22262c }),
   lamp: new THREE.MeshBasicMaterial({ color: 0xffffff }), // emissive 형광등
 }
 
@@ -79,16 +75,21 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   pGrad.rotation.y = Math.PI
   scene.add(pGrad)
 
-  // ── 책상 4 + 모니터 + 의자 ─────────────────────────────────
-  const pc = box(0.6, 0.4, 0.06, M.screen, -2.5, 1.05, -3.2)
+  // ── 책상 4 + 컴퓨터(실물 모델) + 의자 ──────────────────────
+  // 주인공 PC = 회색 풀세트, 나머지 = 검정 모던 세트 (Poly by Google, CC-BY)
+  const pc = makeProp('./assets/models/prop-computer.glb', 0.52)
+  pc.position.set(-2.5, 0.83, -3.05)
   scene.add(pc)
   const deskSpots: Array<[number, number]> = [[-2.5, -3], [2.5, -3], [-2.5, 0], [2.5, 0]]
   for (const [x, z] of deskSpots) {
     scene.add(box(1.6, 0.06, 0.8, M.desk, x, 0.8, z))
     scene.add(box(0.05, 0.74, 0.7, M.desk, x - 0.75, 0.4, z))
     scene.add(box(0.05, 0.74, 0.7, M.desk, x + 0.75, 0.4, z))
-    if (!(x === -2.5 && z === -3))
-      scene.add(box(0.6, 0.4, 0.06, x === 2.5 && z === 0 ? M.screenOff : M.screenDim, x, 1.05, z - 0.2))
+    if (!(x === -2.5 && z === -3)) {
+      const comp = makeProp('./assets/models/prop-computer2.glb', 0.48)
+      comp.position.set(x, 0.83, z - 0.05)
+      scene.add(comp)
+    }
     const chair = makeChair()
     chair.position.set(x, 0, z + 0.6)
     chair.rotation.y = Math.PI
@@ -102,7 +103,8 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   // 남성 동료: 책상 의자에 앉아 일하는 중 (sit_idle) / 여성 동료: 서 있음
   const grad1 = makePerson({ variant: 'man' })
   grad1.play(['new_sit_idle'])
-  grad1.group.position.set(2.5, 0, -2.35) // 책상(2.5,-3) 의자 위
+  // 좌판 정렬 실측 보정: 엉덩이가 등받이에 붙도록
+  grad1.group.position.set(2.5, 0, -2.58)
   grad1.group.rotation.y = Math.PI // 모니터를 향해 앉음 (플레이어에겐 등)
   scene.add(grad1.group)
   const grad2 = makePerson({ variant: 'woman' })
@@ -113,8 +115,8 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
 
   // ── 생활감 소품 ────────────────────────────────────────────
   for (const x of [-1.2, 0.2]) {
-    const shelf = makeShelf()
-    shelf.position.set(x, 0, -4.8)
+    const shelf = makeProp('./assets/models/prop-bookcase.glb', 2.0) // 책 꽂힌 책장 (Quaternius CC0)
+    shelf.position.set(x, 0, -4.72)
     scene.add(shelf)
   }
   const printer = makePrinter()
@@ -135,10 +137,12 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   door.rotation.y = Math.PI
   scene.add(door)
 
-  // ── 냉동고 ─────────────────────────────────────────────────
-  const freezer = box(1, 2, 0.8, M.dark, 3.4, 1, 4.2)
-  scene.add(box(0.5, 0.06, 0.3, M.lamp, 3.4, 1.62, 3.78)) // 리더기 패널
+  // ── 냉동고 (실물 모델: 스틸 캐비닛, MilkAndBanana CC0) ──────
+  const freezer = makeProp('./assets/models/prop-fridge.glb', 1.9)
+  freezer.position.set(3.4, 0, 4.2)
+  freezer.rotation.y = Math.PI // 문이 방 안쪽을 향하게
   scene.add(freezer)
+  scene.add(box(0.4, 0.06, 0.25, M.lamp, 2.85, 1.55, 4.2)) // 리더기 패널 (옆 벽면)
 
   // ── 라이팅: "지나치게 밝은 연구실" — 컨셉의 핵심은 과도한 밝음 (스펙 §10-1)
   // ACES 톤매핑(노출 0.9) 하에서 과노출 형광등 느낌이 나도록 상향 보정

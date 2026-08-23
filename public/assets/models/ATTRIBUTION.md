@@ -1,5 +1,12 @@
 # Third-party model attribution
 
+## 연구실 소품
+
+- `prop-computer.glb` / `prop-computer2.glb` — "Desktop computer" / "Computer" © Poly by Google — CC-BY 3.0
+- `prop-fridge.glb` — "Refrigerator" by MilkAndBanana — CC0
+- `prop-bookcase.glb` — "Bookcase with Books" by Quaternius — CC0
+- 출처: poly.pizza
+
 ## 연구실 인물 3종
 
 - `colleague-man.glb` — "casual male-architectural Updated" © manoeldarochadeoliveira

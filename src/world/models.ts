@@ -63,6 +63,30 @@ export function instantiate(
   return { root, mixer, clips: model.animations }
 }
 
+/**
+ * 정적 소품 로더 — 즉시 빈 그룹을 반환하고 로드 후 채운다 (레이캐스트 대상으로 바로 사용 가능).
+ * 정적 메시는 Box3가 신뢰 가능 — 목표 높이로 정규화하고 바닥·중심을 정렬한다.
+ */
+export function makeProp(url: string, targetHeight: number): THREE.Group {
+  const g = new THREE.Group()
+  void loadModel(url)
+    .then(m => {
+      const root = m.scene.clone(true)
+      const box = new THREE.Box3().setFromObject(root)
+      const h = box.max.y - box.min.y
+      if (h > 0.001) root.scale.multiplyScalar(targetHeight / h)
+      const b2 = new THREE.Box3().setFromObject(root)
+      root.position.set(
+        -(b2.min.x + b2.max.x) / 2,
+        -b2.min.y,
+        -(b2.min.z + b2.max.z) / 2,
+      )
+      g.add(root)
+    })
+    .catch(e => console.warn('[prop] load failed', url, e))
+  return g
+}
+
 export function playClip(
   mixer: THREE.AnimationMixer,
   clips: THREE.AnimationClip[],
