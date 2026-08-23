@@ -8,7 +8,7 @@ import { STR } from '../content/strings'
 import { makePerson } from '../world/person'
 import { sound, FootstepTracker } from '../audio/sound'
 import {
-  makeChair, makePrinter, makeWindow, makeWallClock, makeDoor, makePaperPile,
+  makePrinter, makeWindow, makeWallClock, makeDoor, makePaperPile,
 } from '../world/props'
 import { makeProp } from '../world/models'
 import {
@@ -75,6 +75,9 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   pGrad.rotation.y = Math.PI
   scene.add(pGrad)
 
+  let grad1Chair: THREE.Group | null = null
+  let seatAligned = false
+
   // ── 책상 4 + 컴퓨터(실물 모델) + 의자 ──────────────────────
   // 주인공 PC = 회색 풀세트, 나머지 = 검정 모던 세트 (Poly by Google, CC-BY)
   const pc = makeProp('./assets/models/prop-computer.glb', 0.52)
@@ -90,10 +93,11 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
       comp.position.set(x, 0.83, z - 0.05)
       scene.add(comp)
     }
-    const chair = makeChair()
+    const chair = makeProp('./assets/models/prop-chair.glb', 1.0) // 사무용 의자 (Quaternius CC0)
     chair.position.set(x, 0, z + 0.6)
     chair.rotation.y = Math.PI
     scene.add(chair)
+    if (x === 2.5 && z === -3) grad1Chair = chair // 앉은 동료의 의자 — 런타임 정렬 대상
     const pile = makePaperPile()
     pile.position.set(x + 0.5, 0.84, z + 0.15)
     scene.add(pile)
@@ -108,8 +112,8 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   grad1.group.rotation.y = Math.PI // 모니터를 향해 앉음 (플레이어에겐 등)
   scene.add(grad1.group)
   const grad2 = makePerson({ variant: 'woman' })
-  grad2.group.position.set(-1.8, 0, 0.75)
-  grad2.group.rotation.y = Math.PI - 0.4
+  grad2.group.position.set(2.8, 0, 3.45) // 냉동고 앞에 서서 뭔가 확인하는 중
+  grad2.group.rotation.y = Math.atan2(3.4 - 2.8, 4.2 - 3.45) // 냉동고를 향해
   scene.add(grad2.group)
   const colleague = grad1.group // 상호작용 대상 동료
 
@@ -255,6 +259,23 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
       // 대학원생들의 머리가 아주 천천히 플레이어를 따라온다 (+숨쉬기·타이핑)
       grad1.update(dt, camera.position)
       grad2.update(dt, camera.position)
+      // 의자를 앉은 자세의 실제 엉덩이 뼈 아래로 자동 정렬 (눈대중 배치 금지)
+      if (!seatAligned && grad1Chair) {
+        let hip: THREE.Object3D | null = null
+        grad1.group.traverse(o => {
+          if (!hip && /hip|pelvis/i.test(o.name)) hip = o
+        })
+        if (hip) {
+          const p = (hip as THREE.Object3D).getWorldPosition(new THREE.Vector3())
+          // 앉은 자세가 완성된 뒤에만 (서있는 크로스페이드 중이면 0.9m대라 스킵)
+          if (p.y > 0.15 && p.y < 0.75) {
+            grad1Chair.position.x = p.x
+            grad1Chair.position.z = p.z + 0.06
+            grad1Chair.scale.setScalar(Math.min(1.4, Math.max(0.8, (p.y - 0.03) / 0.475)))
+            seatAligned = true
+          }
+        }
+      }
       if (ctx.modes.mode !== 'fps') {
         ctx.overlay.setCrosshair('off')
         aimed = null
