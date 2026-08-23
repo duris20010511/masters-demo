@@ -68,11 +68,14 @@ export function makeChase(): GameScene {
     .catch(e => console.warn('[scare] gaunt load failed', e))
 
   const controls = new FPSControls(camera)
-  // 알코브 진입을 위해 x 경계는 넓게 잡고, 프레임마다 수동 클램프
+  // 경계는 복도 전체(알코브 포함)로 넓게, 실제 차단은 벽 콜라이더가 담당한다.
+  // (좌표 클램프 방식은 알코브에서 대각선 이동에 뚫린다 — 연구실과 같은 AABB 방식으로 통일)
   controls.setBounds(
-    new THREE.Vector3(-(CORRIDOR.W / 2 + CORRIDOR.RECESS - 0.15), 1.6, rig.endDoorZ + 0.6),
-    new THREE.Vector3(CORRIDOR.W / 2 + CORRIDOR.RECESS - 0.15, 1.6, 1.8),
+    new THREE.Vector3(-(CORRIDOR.W / 2 + CORRIDOR.RECESS), 1.6, rig.endDoorZ + 0.5),
+    new THREE.Vector3(CORRIDOR.W / 2 + CORRIDOR.RECESS, 1.6, 2.0),
   )
+  // 반경 0.22 — 알코브(문틈) 입구 폭이 1m라 숨으러 들어갈 여유를 남긴다
+  controls.setColliders(FPSControls.collidersFrom(rig.wallMeshes), 0.22)
 
   const ray = new THREE.Raycaster()
   const steps = new FootstepTracker()
@@ -96,19 +99,6 @@ export function makeChase(): GameScene {
       searchMs: 2500,
       catchRadius: 0.55,
     })
-  }
-
-  function clampToCorridor(p: THREE.Vector3): void {
-    let xMin = -(CORRIDOR.W / 2 - 0.22)
-    let xMax = CORRIDOR.W / 2 - 0.22
-    for (const zone of rig.recessZones) {
-      if (p.z >= zone.zMin && p.z <= zone.zMax) {
-        const deep = zone.side * (CORRIDOR.W / 2 + CORRIDOR.RECESS - 0.18)
-        if (zone.side > 0) xMax = deep
-        else xMin = deep
-      }
-    }
-    p.x = Math.max(xMin, Math.min(xMax, p.x))
   }
 
   function isOccluded(): boolean {
@@ -229,7 +219,6 @@ export function makeChase(): GameScene {
     update(dt) {
       controls.update(dt)
       if (!ctx || busy || !ai) return
-      clampToCorridor(camera.position)
       if (ctx.modes.mode !== 'fps') return
       steps.update(camera.position)
 

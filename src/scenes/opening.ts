@@ -21,7 +21,8 @@ export function makeOpening(): GameScene {
   scene.add(new THREE.AmbientLight(0xffffff, 0.45))
 
   const controls = new FPSControls(camera)
-  controls.setBounds(new THREE.Vector3(-0.9, 1.6, rig.endDoorZ + 0.8), new THREE.Vector3(0.9, 1.6, 1.8))
+  controls.setBounds(new THREE.Vector3(-1.6, 1.6, rig.endDoorZ + 0.6), new THREE.Vector3(1.6, 1.6, 2.0))
+  controls.setColliders(FPSControls.collidersFrom(rig.wallMeshes), 0.22) // 벽 통과 방지
 
   // 교수 — 정문 오류 후 등 뒤에 서 있다 (정장 모델, 시선 추적 포함)
   const prof = makePerson({ variant: 'suit' })
