@@ -37,10 +37,12 @@ export class PostFX {
       0.5, // radius
       0.82, // threshold
     )
+    // 톤매핑(ACES)·sRGB 변환은 OutputPass가 없으면 컴포저 체인에서 적용되지 않는다.
+    // 글리치는 **OutputPass 뒤**여야 한다: 선형 공간에서 그레인을 더하면 어두운 화면에서
+    // 0.07 선형 ≈ sRGB 0.29 로 증폭돼 복도 전체가 노이즈로 덮인다.
     this.composer.addPass(this.bloom)
-    this.composer.addPass(this.pass)
-    // 톤매핑(ACES)·sRGB 변환은 OutputPass가 없으면 컴포저 체인에서 적용되지 않는다
     this.composer.addPass(new OutputPass())
+    this.composer.addPass(this.pass)
   }
 
   setScene(scene: THREE.Scene, camera: THREE.Camera): void {

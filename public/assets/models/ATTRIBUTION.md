@@ -47,6 +47,9 @@
 ## PBR 텍스처 (월드)
 
 - `public/assets/textures/*.webp` — ambientCG **CC0**
-  - wall: Concrete012 / floor: Tiles074 / ceil: OfficeCeiling001
-  - 각 Color·NormalGL·Roughness 3종, 1024px WebP로 변환 (원본 JPG 19MB → 1.37MB)
+  - wall: Concrete012 (추격전 지하복도의 거친 노출 콘크리트)
+  - plaster: Plaster001 (연구실·정상 복도의 도장 미장 벽)
+  - floor: Tiles040 (얼룩무늬 단일 비닐타일 — 체크무늬 Tiles074에서 교체)
+  - ceil: OfficeCeiling001
+  - 각 Color·NormalGL·Roughness 3종, 1024px WebP로 변환
 - 출처: https://ambientcg.com — CC0, 크레딧 불요

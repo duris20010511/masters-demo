@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { makeDoor, makePlateTexture } from './props'
 import { makeProp } from './models'
 import { makeGlowSprite, makeExitSign } from './textures'
-import { surface, solid } from './materials'
+import { surface, solid, boxUV, PER_M } from './materials'
 
 interface PropSpot {
   url: string
@@ -29,10 +29,11 @@ interface PropSpot {
 
 // PBR 재질 (ambientCG CC0) — 손전등이 훑을 때 요철이 살아난다
 const M = {
-  wall: surface('wall', { repeatX: 2, repeatY: 1.2, color: 0x9a9aa4 }),
-  inner: surface('wall', { repeatX: 3, repeatY: 1.2, color: 0x86868f }),
-  floor: surface('floor', { repeatX: 14, repeatY: 12, color: 0x8f8f96 }),
-  ceil: surface('ceil', { repeatX: 12, repeatY: 10, color: 0x7a7a82 }),
+  // repeat은 1로 두고 밀도는 boxUV()가 면 크기에 맞춰 잡는다
+  wall: surface('wall', { repeatX: 1, repeatY: 1, color: 0x9a9aa4 }),
+  inner: surface('wall', { repeatX: 1, repeatY: 1, color: 0x86868f }),
+  floor: surface('floor', { repeatX: 1, repeatY: 1, color: 0x8f8f96 }),
+  ceil: surface('ceil', { repeatX: 1, repeatY: 1, color: 0x7a7a82 }),
   redLamp: new THREE.MeshBasicMaterial({ color: 0xff2a1a }),
   desk: solid(0x8b8577, 0.7),
 }
@@ -78,7 +79,7 @@ export function buildLoopMap(): LoopMapRig {
   const solidProps: THREE.Group[] = [] // 비동기 GLB 소품 (로드 후 콜라이더 재계산 대상)
 
   const wall = (w: number, d: number, x: number, z: number, mat = M.wall): void => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), mat)
+    const m = new THREE.Mesh(boxUV(w, H, d, PER_M.wall), mat)
     m.position.set(x, H / 2, z)
     walls.push(m)
     g.add(m)
@@ -115,10 +116,10 @@ export function buildLoopMap(): LoopMapRig {
   const fd = FLOOR.zMax - FLOOR.zMin
   const fx = (FLOOR.xMin + FLOOR.xMax) / 2
   const fz = (FLOOR.zMin + FLOOR.zMax) / 2
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(fw, 0.1, fd), M.floor)
+  const floor = new THREE.Mesh(boxUV(fw, 0.1, fd, PER_M.floor), M.floor)
   floor.position.set(fx, -0.05, fz)
   g.add(floor)
-  const ceil = new THREE.Mesh(new THREE.BoxGeometry(fw, 0.1, fd), M.ceil)
+  const ceil = new THREE.Mesh(boxUV(fw, 0.1, fd, PER_M.ceil), M.ceil)
   ceil.position.set(fx, H, fz)
   g.add(ceil)
 
@@ -159,7 +160,7 @@ export function buildLoopMap(): LoopMapRig {
   wallRun('z', IN.xMax, IN.zMin, IN.zMax)
   // 블록 속을 시각적으로 채움 (안쪽이 비어 보이지 않게)
   const core = new THREE.Mesh(
-    new THREE.BoxGeometry(IN.xMax - IN.xMin - 0.3, H, IN.zMax - IN.zMin - 0.3),
+    boxUV(IN.xMax - IN.xMin - 0.3, H, IN.zMax - IN.zMin - 0.3, PER_M.wall),
     M.inner,
   )
   core.position.set((IN.xMin + IN.xMax) / 2, H / 2, (IN.zMin + IN.zMax) / 2)

@@ -12,16 +12,15 @@ import {
 } from '../world/props'
 import { makeProp } from '../world/models'
 import { makeGlowSprite, makePosterMesh } from '../world/textures'
-import { surface, solid } from '../world/materials'
+import { surface, solid, boxUV, PER_M } from '../world/materials'
 
-// PBR 재질 — 밝은 연구실이라 벽은 밝게 틴트
+// PBR 재질. 콘크리트 알베도가 누런 편이라 틴트를 차갑게 줘야 중립 회백색으로 떨어진다
 const M = {
-  wallZ: surface('wall', { repeatX: 4, repeatY: 1.5, color: 0xf0ece2 }),
-  wallX: surface('wall', { repeatX: 5, repeatY: 1.5, color: 0xf0ece2 }),
-  floor: surface('floor', { repeatX: 8, repeatY: 10, color: 0xd8d8d4 }),
-  ceil: surface('ceil', { repeatX: 7, repeatY: 8, color: 0xe8e8e4 }),
-  desk: solid(0xc9c4b8, 0.65),
-  lamp: new THREE.MeshBasicMaterial({ color: 0xffffff }), // emissive 형광등
+  wall: surface('plaster', { repeatX: 1, repeatY: 1, color: 0xe4e8ee }),
+  floor: surface('floor', { repeatX: 1, repeatY: 1, color: 0xb2b8bc }),
+  ceil: surface('ceil', { repeatX: 1, repeatY: 1, color: 0xdadee0 }),
+  desk: solid(0xbdb9ad, 0.65),
+  lamp: new THREE.MeshBasicMaterial({ color: 0xdde3e8 }), // 형광등 확산판 — 순백이면 블룸이 터진다
 }
 
 function box(
@@ -49,16 +48,23 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   camera.position.set(0, 1.6, 3)
 
   // ── 방 8x3x10 ──────────────────────────────────────────────
-  scene.add(box(8, 0.1, 10, M.floor, 0, -0.05, 0))
-  scene.add(box(8, 0.1, 10, M.ceil, 0, 3, 0))
-  scene.add(box(8, 3, 0.1, M.wallZ, 0, 1.5, -5))
-  scene.add(box(8, 3, 0.1, M.wallZ, 0, 1.5, 5))
-  scene.add(box(0.1, 3, 10, M.wallX, -4, 1.5, 0))
-  scene.add(box(0.1, 3, 10, M.wallX, 4, 1.5, 0))
+  const surf = (w: number, h: number, d: number, m: THREE.Material, per: number,
+                x: number, y: number, z: number): THREE.Mesh => {
+    const mesh = new THREE.Mesh(boxUV(w, h, d, per), m)
+    mesh.position.set(x, y, z)
+    return mesh
+  }
+  scene.add(surf(8, 0.1, 10, M.floor, PER_M.floor, 0, -0.05, 0))
+  scene.add(surf(8, 0.1, 10, M.ceil, PER_M.ceil, 0, 3, 0))
+  scene.add(surf(8, 3, 0.1, M.wall, PER_M.plaster, 0, 1.5, -5))
+  scene.add(surf(8, 3, 0.1, M.wall, PER_M.plaster, 0, 1.5, 5))
+  scene.add(surf(0.1, 3, 10, M.wall, PER_M.plaster, -4, 1.5, 0))
+  scene.add(surf(0.1, 3, 10, M.wall, PER_M.plaster, 4, 1.5, 0))
   for (const z of [-3, -1, 1, 3]) {
     scene.add(box(1.4, 0.05, 0.5, M.lamp, 0, 2.95, z))
-    const glow = makeGlowSprite(2.6, 1.3)
-    glow.position.set(0, 2.8, z)
+    // 가산 스프라이트 4장이 소실점에서 겹쳐 흰 덩어리가 된다 — 작고 옅게
+    const glow = makeGlowSprite(1.5, 0.62, 0x5a5c60)
+    glow.position.set(0, 2.86, z)
     scene.add(glow)
   }
 
@@ -161,16 +167,16 @@ export function makeLab(cycle: 1 | 2 = 1): GameScene {
   solids.push(freezer)
   scene.add(box(0.4, 0.06, 0.25, M.lamp, 2.85, 1.55, 4.2)) // 리더기 패널 (옆 벽면)
 
-  // ── 라이팅: "지나치게 밝은 연구실" — 컨셉의 핵심은 과도한 밝음 (스펙 §10-1)
-  // ACES 톤매핑(노출 0.9) 하에서 과노출 형광등 느낌이 나도록 상향 보정
-  scene.add(new THREE.HemisphereLight(0xfff6e8, 0x8a8a96, 2.2))
-  scene.add(new THREE.AmbientLight(0xffffff, 0.5))
-  const p1 = new THREE.PointLight(0xfff2dc, 34, 13)
-  p1.position.set(0, 2.7, -2)
-  scene.add(p1)
-  const p2 = new THREE.PointLight(0xfff2dc, 34, 13)
-  p2.position.set(0, 2.7, 2)
-  scene.add(p2)
+  // ── 라이팅: 형광등이 고르게 깔린 연구실 (스펙 §10-1)
+  // 주광색(약간 푸른 흰색)이라야 한국 실험실처럼 읽힌다. 전구색이면 벽이 누렇게 뜬다.
+  scene.add(new THREE.HemisphereLight(0xeef4f8, 0x707480, 0.7))
+  scene.add(new THREE.AmbientLight(0xffffff, 0.12))
+  // 천장 형광등 4개 위치에 맞춰 약한 광원을 분산 — 하나가 세면 그 아래만 하얗게 탄다
+  for (const z of [-3, -1, 1, 3]) {
+    const l = new THREE.PointLight(0xf4f8ff, 7, 8.5, 2)
+    l.position.set(0, 2.8, z)
+    scene.add(l)
+  }
 
   const controls = new FPSControls(camera)
   controls.setBounds(new THREE.Vector3(-3.3, 1.6, -4.2), new THREE.Vector3(3.3, 1.6, 4.4))

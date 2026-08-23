@@ -1,13 +1,13 @@
 import * as THREE from 'three'
 import { makeDoor, makePlateTexture } from './props'
 import { makeGlowSprite, makeExitSign } from './textures'
-import { surface } from './materials'
+import { surface, boxUV, PER_M } from './materials'
 
 const M = {
   // 알베도를 너무 낮추면 어떤 조명으로도 안 보인다 — 어둠은 조명·안개로 만든다
-  wallDark: surface('wall', { repeatX: 2, repeatY: 1.2, color: 0x9a9aa4 }),
-  floorDark: surface('floor', { repeatX: 2, repeatY: 12, color: 0x8f8f96 }),
-  lamp: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  wallDark: surface('wall', { repeatX: 1, repeatY: 1, color: 0x9a9aa4 }),
+  floorDark: surface('floor', { repeatX: 1, repeatY: 1, color: 0x8f8f96 }),
+  lamp: new THREE.MeshBasicMaterial({ color: 0xdde3e8 }), // 순백이면 블룸이 터진다
   redLamp: new THREE.MeshBasicMaterial({ color: 0xff2a1a }),
 }
 
@@ -44,25 +44,30 @@ export function buildCorridor(opts: { dark: boolean; segments?: number }): Corri
   const g = new THREE.Group()
   const segs = opts.segments ?? SEGS
   const length = SEG * segs
-  const wall = opts.dark ? M.wallDark : surface('wall', { repeatX: 8, repeatY: 1.2 })
+  // 콘크리트 알베도가 누렇다 — 차가운 틴트를 곱해야 중립 회백색 복도가 된다.
+  // BoxGeometry는 면마다 UV가 0..1이므로 repeat은 "면 하나당 타일 수"다.
+  const wall = opts.dark ? M.wallDark : surface('plaster', { repeatX: 1, repeatY: 1, color: 0xe4e8ee })
   const floor = opts.dark
     ? M.floorDark
-    : surface('floor', { repeatX: 2, repeatY: (length + 4) / 2, color: 0xb8b8bc })
+    : surface('floor', { repeatX: 1, repeatY: 1, color: 0xb2b8bc })
   const ceil = opts.dark
     ? M.wallDark
-    : surface('ceil', { repeatX: 2, repeatY: (length + 4) / 3 })
+    : surface('ceil', { repeatX: 1, repeatY: 1, color: 0xdadee0 })
   const walls: THREE.Mesh[] = []
   const recessZones: RecessZone[] = []
 
   const mkWall = (w: number, h: number, d: number, x: number, y: number, z: number) => {
-    const m = box(w, h, d, wall, x, y, z)
+    const m = new THREE.Mesh(boxUV(w, h, d, opts.dark ? PER_M.wall : PER_M.plaster), wall)
+    m.position.set(x, y, z)
     walls.push(m)
     g.add(m)
   }
 
   // 바닥·천장 (알코브 폭까지 커버)
-  g.add(box(W + RECESS * 2 + 0.2, 0.1, length + 4, floor, 0, -0.05, -length / 2 + 1))
-  g.add(box(W + RECESS * 2 + 0.2, 0.1, length + 4, ceil, 0, 3, -length / 2 + 1))
+  const fw = W + RECESS * 2 + 0.2
+  const fl = length + 4
+  g.add(new THREE.Mesh(boxUV(fw, 0.1, fl, PER_M.floor), floor).translateY(-0.05).translateZ(-length / 2 + 1))
+  g.add(new THREE.Mesh(boxUV(fw, 0.1, fl, PER_M.ceil), ceil).translateY(3).translateZ(-length / 2 + 1))
   // 시작 쪽 막힌 벽
   mkWall(W + RECESS * 2, 3, 0.1, 0, 1.5, 2.4)
 
@@ -79,9 +84,13 @@ export function buildCorridor(opts: { dark: boolean; segments?: number }): Corri
       g.add(glow)
     } else {
       g.add(box(0.9, 0.04, 0.35, M.lamp, 0, 2.95, zc))
-      const glow = makeGlowSprite(1.8, 1.0)
-      glow.position.set(0, 2.82, zc)
+      const glow = makeGlowSprite(1.5, 0.7, 0x6a6c70)
+      glow.position.set(0, 2.86, zc)
       g.add(glow)
+      // HemisphereLight만으로는 수직 벽이 거의 안 밝아진다 — 형광등마다 실제 광원을 둔다
+      const lampLight = new THREE.PointLight(0xf4f8ff, 8, 8.5, 2)
+      lampLight.position.set(0, 2.8, zc)
+      g.add(lampLight)
     }
     // 양옆: 벽 조각 2개 + 알코브(뒷벽·옆벽 2) + 문 + 명패
     for (const side of [-1, 1] as const) {

@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { createState } from './core/state'
+import { createState, type PhaseId } from './core/state'
 import { ModeManager, lockState } from './input/modes'
 import { PostFX } from './render/postfx'
 import { configureRenderer } from './render/rendererConfig'
@@ -61,6 +61,12 @@ const modes = new ModeManager({
 
 // 재접속 복원은 타이틀 씬 내부에서 처리 (title.ts)
 const state = createState()
+
+// 개발용 진입점: ?scene=cycle1 처럼 특정 페이즈로 직행한다.
+// 시각 검증(헤드리스 캡처)과 데모 영상 촬영에서 타이틀·이전 씬을 건너뛰기 위한 것.
+const PHASES: PhaseId[] = ['title', 'opening', 'cycle1', 'cycle2', 'chase', 'ending']
+const devScene = new URLSearchParams(location.search).get('scene')
+if (devScene && (PHASES as string[]).includes(devScene)) state.phase = devScene as PhaseId
 
 const scenes = new SceneManager({ state, overlay, fx, modes, renderer })
 scenes.register('title', () => makeTitle())

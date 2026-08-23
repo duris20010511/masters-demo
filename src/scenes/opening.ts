@@ -17,8 +17,9 @@ export function makeOpening(): GameScene {
 
   const rig = buildCorridor({ dark: false })
   scene.add(rig.group)
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x9a9aa8, 2.2))
-  scene.add(new THREE.AmbientLight(0xffffff, 0.45))
+  // 연구실과 같은 주광색 형광등 — 전구색이면 벽이 누렇게 뜬다
+  scene.add(new THREE.HemisphereLight(0xeef4f8, 0x707480, 0.8))
+  scene.add(new THREE.AmbientLight(0xffffff, 0.14))
 
   const controls = new FPSControls(camera)
   controls.setBounds(new THREE.Vector3(-1.6, 1.6, rig.endDoorZ + 0.6), new THREE.Vector3(1.6, 1.6, 2.0))
